@@ -1,0 +1,89 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2022 FLATIDE LC.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+package com.flatide.floodgate.agent.flow.stream;
+
+import com.flatide.floodgate.agent.flow.stream.carrier.Carrier;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+
+public class FGBlockingInputStream extends FGInputStream {
+    private final List<BlockingQueue<Object>> currentDataList = new ArrayList<>();
+    private long currentSize = 0;
+
+    public FGBlockingInputStream(Carrier carrier) {
+        super(carrier);
+    }
+
+    @Override
+    public void setMaxSubscriber(int maxSubscriber) {
+        super.setMaxSubscriber(maxSubscriber);
+
+        for (int i = 0; i < maxSubscriber; i++) {
+            BlockingQueue<Object> queue = new ArrayBlockingQueue<>(1);
+            this.currentDataList.add(queue);
+        }
+    }
+
+    @Override
+    public long next(Payload payload) {
+        try {
+            synchronized (this) {
+                boolean needForward = true;
+                for (int i = 0; i < super.getMaxSubscriber(); i++) {
+                    BlockingQueue<Object> queue = this.currentDataList.get(i);
+                    if (queue.size() > 0) {
+                        needForward = false;
+                    }
+                }
+
+                if (needForward) {
+                    if (!getCarrier().isFinished()) {
+                        this.currentSize = getCarrier().forward();
+                        if( this.currentSize > 0 ) {
+                            Object data = getCarrier().getBuffer();
+                            for (int i = 0; i < super.getMaxSubscriber(); i++) {
+                                BlockingQueue<Object> queue = this.currentDataList.get(i);
+                                queue.put(data);
+                            }
+                        }
+                    }
+                }
+            }
+            if (!getCarrier().isFinished()) {
+                BlockingQueue<Object> queue = this.currentDataList.get(payload.getId());
+                payload.setData(queue.take());
+                payload.setDataSize(this.currentSize);
+            }
+        } catch (Exception e) {
+            this.currentSize = -1;
+            e.printStackTrace();
+        }
+
+        return this.currentSize;
+    }
+}
