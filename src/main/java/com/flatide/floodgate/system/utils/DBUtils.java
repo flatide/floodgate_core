@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package comflatide.floodgate.system.utils;
+package com.flatide.floodgate.system.utils;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -79,12 +79,12 @@ public class DBUtils {
             case "MSSQL":
                 return "jdbc:sqlserver://" + ipports[0] + ";databaseName=" + sid;
             case "MYSQL_OLD":
-                return "jdbc:mysql://" + ipports[0] + "?characterEncoding=UTF-8&useConfigs=maxPerformance";
+                return "jdbc:mysql://" + ipports[0] + "/" + sid + "?characterEncoding=UTF-8&useConfigs=maxPerformance";
             case "MYSQL":
-                return "jdbc:mysql://" + ipports[0] + "?serverTimezone=UTC&characterEncoding=UTF-8&useConfigs=maxPerformance";
+                return "jdbc:mysql://" + ipports[0] + "/" + sid + "?serverTimezone=UTC&characterEncoding=UTF-8&useConfigs=maxPerformance";
 
             case "MARIADB":
-                return "jdbc:mysql://" + ipports[0] + "?characterEncoding=UTF-8&useConfigs=maxPerformance";
+                return "jdbc:mysql://" + ipports[0] + "/" + sid + "?characterEncoding=UTF-8&useConfigs=maxPerformance";
             case "DB2":
                 return "jdbc:db2://" + ipports[0] + "/" + sid;
             default:
@@ -97,7 +97,7 @@ public class DBUtils {
             DatabaseMetaData databaseMetaData = con.getMetaData();
 
             // return String.format("JDBC Version : %d.%d", databaseMetaData.getJDBCMajorVersion(), databaseMetaData.getJDBCMinorVersion());
-            return String.format("%s : %s" , databaseMetaData.getDatabaseProductName(), databaseMetaData.getDatabaseProductVersion());
+            return String.format("%s : %s", databaseMetaData.getDatabaseProductName(), databaseMetaData.getDatabaseProductVersion());
         } catch(Exception e) {
             throw e;
         }
@@ -107,7 +107,7 @@ public class DBUtils {
         try ( Connection con = DriverManager.getConnection(url, userid, passwd) ) {
             DatabaseMetaData databaseMetaData = con.getMetaData();
 
-            ResultSet resultSet = databaseMetaData.getTables(null, nul, atble, new String[] {"TABLE"});
+            ResultSet resultSet = databaseMetaData.getTables(null, null, atble, new String[] {"TABLE"});
 
             return resultSet.next();
         } catch(Exception e) {

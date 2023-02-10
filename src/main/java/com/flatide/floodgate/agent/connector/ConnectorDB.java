@@ -243,30 +243,30 @@ public class ConnectorDB extends ConnectorBase {
 
             for (MappingRuleItem item : rule.getRules()) {
                 switch(item.getAction()) {
-                    case system:
-                        break;
-                    case function:
-                        break;
-                    case literal:
-                        // it is possitble that source column is exist in literal 
-                        String source = item.getSourceName();
+                case system:
+                    break;
+                case function:
+                    break;
+                case literal:
+                    // it is possitble that source column is exist in literal 
+                    String source = item.getSourceName();
 
-                        Pattern pattern = Pattern.compile("\\$.+?\\$");
-                        Matcher matcher = pattern.matcher(source);
+                    Pattern pattern = Pattern.compile("\\$.+?\\$");
+                    Matcher matcher = pattern.matcher(source);
 
-                        while (matcher.find()) {
-                            String col = source.substring(matcher.start() + 1, matcher.end() - 1);
-                            sourceSet.add(col);
-                        }
-                        break;
-                    case reference:
-                        sourceSet.add(item.getSourceName());
-                        // source column
-                        break;
-                    case order:
-                        break;
-                    default:
-                        break;
+                    while (matcher.find()) {
+                        String col = source.substring(matcher.start() + 1, matcher.end() - 1);
+                        sourceSet.add(col);
+                    }
+                    break;
+                case reference:
+                    sourceSet.add(item.getSourceName());
+                    // source column
+                    break;
+                case order:
+                    break;
+                default:
+                    break;
                 }
             }
 

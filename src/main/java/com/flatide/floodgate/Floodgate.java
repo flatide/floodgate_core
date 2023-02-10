@@ -30,7 +30,7 @@ import com.flatide.floodgate.agent.meta.MetaManager;
 public class Floodgate {
     public static void init() throws Exception {
         String metaDatasource = (String) ConfigurationManager.shared().get("channel.meta.datasource");
-        MetaManager.shared().chageSource(metaDatasource, false);
+        MetaManager.shared().changeSource(metaDatasource, false);
 
         String logDatasource = (String) ConfigurationManager.shared().get("channel.log.datasource");
         LoggingManager.shared().changeSource(logDatasource, false);

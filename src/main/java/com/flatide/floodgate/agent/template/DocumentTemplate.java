@@ -87,11 +87,11 @@ public class DocumentTemplate {
                 //Path path = Paths.get(builtInTemplate + ".template");
                 //List<String> lines = Files.readAllLines(path);
 
-            	URL url = Thread.currentThread().getContextClassLoader().getResource(builtInTemplate + ".template");
-            	Path path = Paths.get(url.getPath());
-            	lines = Files.readAllLines(path);
-            	
-            	/*
+                URL url = Thread.currentThread().getContextClassLoader().getResource(builtInTemplate + ".template");
+                Path path = Paths.get(url.getPath());
+                lines = Files.readAllLines(path);
+                
+                /*
                 ClassPathResource resource = new ClassPathResource(builtInTemplate + ".template");
                 InputStreamReader isr = new InputStreamReader(resource.getInputStream(), "UTF-8");
                 BufferedReader br = new BufferedReader(isr);

@@ -169,7 +169,7 @@ public class Module {
 
                             FGInputStream currentStream = flowContext.getCurrent();
                             if( currentStream != null ) {
-                                Payload payload = flowContext.getCurrent().subscribe();
+                                payload = flowContext.getCurrent().subscribe();
                                 //Payload payload = context.getPayload();
                             }
                             //logger.info(data.toString());

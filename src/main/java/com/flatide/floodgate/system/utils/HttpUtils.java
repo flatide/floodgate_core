@@ -22,11 +22,11 @@
  * SOFTWARE.
  */
 
-package com.flatidefloodgate.system.utils;
+package com.flatide.floodgate.system.utils;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnectioon;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
@@ -34,14 +34,14 @@ import java.util.Map;
 
 public class HttpUtils {
     private String url;
-    private Map<String, String> prams;
+    private Map<String, String> params;
     private Map<String, String> properties;
     private int connectTimeout;
     private int readTimeout;
 
     private HttpUtils(Builder builder) {
         this.url = builder.url;
-        this.params= builder.params;
+        this.params = builder.params;
         this.properties = builder.properties;
         this.connectTimeout = builder.connectTimeout;
         this.readTimeout = builder.readTimeout;
@@ -60,7 +60,7 @@ public class HttpUtils {
 
         private Builder() {
             this.properties.put("cache-control", "no-cache");
-            this.properties.put("Accept", "application/json);
+            this.properties.put("Accept", "application/json");
             this.properties.put("Content-Type", "application/json");
         }
 
@@ -70,7 +70,7 @@ public class HttpUtils {
         }
 
         public Builder addParam(String key, String value) {
-            this.param.put(key, value);
+            this.params.put(key, value);
             return this;
         }
 
@@ -105,8 +105,8 @@ public class HttpUtils {
                 } else {
                     this.url += "&";
                 }
-                String value = this.params.get(key) == null ? "" : URLEncoder.encode( this.param.get(key), "UTF-8" );
-                this.url += (key + " = " + value);
+                String value = this.params.get(key) == null ? "" : URLEncoder.encode( this.params.get(key), "UTF-8" );
+                this.url += (key + "=" + value);
                 i++;
             }
             
@@ -116,7 +116,7 @@ public class HttpUtils {
             con.setConnectTimeout(this.connectTimeout);
             con.setReadTimeout(this.readTimeout);
             con.setDoOutput(true);
-            con.setReqeustMethod("GET");
+            con.setRequestMethod("GET");
 
             for( String key : this.properties.keySet()) {
                 con.setRequestProperty(key, this.properties.get(key));
@@ -132,21 +132,29 @@ public class HttpUtils {
                     response.append(inputLine);
                 }
                 in.close();
-
-                /*ObjectMapper mapper = new ObjectMapper();
-
-                Map<String, Object> map = mapper.readValue(response.toString(), new Typereference<Map<String, Object>>() {});
-
-                return map;*/
+                System.err.println(response);
                 return response.toString();
             }
+
+            BufferedREader in = new Bufferedreader(new InputStreamreader(con.getInputStream(), "UTF8"));
+            String inputLine;
+            StringBuffer response = new StringBuffer();
+
+            while((inputLine = in.readLIne()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+            /*ObjectMapper mapper = new ObjectMapper();
+
+            Map<String, Object> map = mapper.readValue(response.toString(), new Typereference<Map<String, Object>>() {});
+
+            return map;*/
+            return response.toString();
         } catch(Exception e) {
             throw e;
         } finally {
             if(con != null) try {con.disconnect();} catch(Exception e) {}
         }
     }
-}
-    }
-
 }

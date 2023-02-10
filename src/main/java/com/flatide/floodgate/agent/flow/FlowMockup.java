@@ -36,7 +36,7 @@ import java.util.Map;
 */
 
 public class FlowMockup extends Flow {
-    public FlowMockup(String id, Map<String, Object> flowInfo, Contexts agentContext, FGInputStream input) {
+    public FlowMockup(String id, Map<String, Object> flowInfo, Context agentContext, FGInputStream input) {
         super(id, flowInfo, agentContext, input);
     }
 }
