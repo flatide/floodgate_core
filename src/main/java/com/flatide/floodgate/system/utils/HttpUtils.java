@@ -56,7 +56,7 @@ public class HttpUtils {
         private Map<String, String> params = new HashMap<>();
         private Map<String, String> properties = new HashMap<>();
         private int connectTimeout = 1000;
-        private int readtimeout = 5000;
+        private int readTimeout = 5000;
 
         private Builder() {
             this.properties.put("cache-control", "no-cache");
@@ -123,7 +123,7 @@ public class HttpUtils {
             }
 
             int responseCode = con.getResponseCode();
-            if( responseCode < 200 || respnoseCode > 299 ) {
+            if( responseCode < 200 || responseCode > 299 ) {
                 BufferedReader in = new BufferedReader(new InputStreamReader(con.getErrorStream(), "UTF8"));
                 String inputLine;
                 StringBuffer response = new StringBuffer();
@@ -136,18 +136,18 @@ public class HttpUtils {
                 return response.toString();
             }
 
-            BufferedREader in = new Bufferedreader(new InputStreamreader(con.getInputStream(), "UTF8"));
+            BufferedREader in = new Bufferedreader(new InputStreamReader(con.getInputStream(), "UTF8"));
             String inputLine;
             StringBuffer response = new StringBuffer();
 
-            while((inputLine = in.readLIne()) != null) {
+            while((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
             }
             in.close();
 
             /*ObjectMapper mapper = new ObjectMapper();
 
-            Map<String, Object> map = mapper.readValue(response.toString(), new Typereference<Map<String, Object>>() {});
+            Map<String, Object> map = mapper.readValue(response.toString(), new TypeReference<Map<String, Object>>() {});
 
             return map;*/
             return response.toString();

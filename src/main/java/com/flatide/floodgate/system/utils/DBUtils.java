@@ -44,9 +44,9 @@ public class DBUtils {
                     if( sid.startsWith("/") ) { // for ServiceName
                         return "jdbc:oracle:thin:@" + ipports[0].trim() + sid.trim();
                     }
-                    return "jdbc.oracle:thin:@" + ipports[0].trim() + ":" + sid.trim();
+                    return "jdbc:oracle:thin:@" + ipports[0].trim() + ":" + sid.trim();
                 } else {
-                    String url = "jdbc.oracle:thin:@(DESCRIPTION=(FAILOVER=ON)(LOAD_BALANCE=OFF)(ADDRESS_LIST=";
+                    String url = "jdbc:oracle:thin:@(DESCRIPTION=(FAILOVER=ON)(LOAD_BALANCE=OFF)(ADDRESS_LIST=";
                     for (int i = 0; i < ipports.length; i++) {
                         String[] ip_port = ipports[i].split(":");
                         url += "(ADDRESS=(PROTOCOL=TCP)(HOST=" + ip_port[0] + ")(PORT=" + ip_port[1] + "))";
@@ -107,7 +107,7 @@ public class DBUtils {
         try ( Connection con = DriverManager.getConnection(url, userid, passwd) ) {
             DatabaseMetaData databaseMetaData = con.getMetaData();
 
-            ResultSet resultSet = databaseMetaData.getTables(null, null, atble, new String[] {"TABLE"});
+            ResultSet resultSet = databaseMetaData.getTables(null, null, tatble, new String[] {"TABLE"});
 
             return resultSet.next();
         } catch(Exception e) {
