@@ -84,7 +84,7 @@ public class HttpUtils {
             return this;
         }
 
-        public Builder SetReadTimeout(int mills) {
+        public Builder setReadTimeout(int mills) {
             this.readTimeout = mills;
         }
 
@@ -136,7 +136,7 @@ public class HttpUtils {
                 return response.toString();
             }
 
-            BufferedREader in = new Bufferedreader(new InputStreamReader(con.getInputStream(), "UTF8"));
+            BufferedReader in = new Bufferedreader(new InputStreamReader(con.getInputStream(), "UTF8"));
             String inputLine;
             StringBuffer response = new StringBuffer();
 

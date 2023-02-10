@@ -107,7 +107,7 @@ public class DBUtils {
         try ( Connection con = DriverManager.getConnection(url, userid, passwd) ) {
             DatabaseMetaData databaseMetaData = con.getMetaData();
 
-            ResultSet resultSet = databaseMetaData.getTables(null, null, tatble, new String[] {"TABLE"});
+            ResultSet resultSet = databaseMetaData.getTables(null, null, table, new String[] {"TABLE"});
 
             return resultSet.next();
         } catch(Exception e) {
