@@ -34,10 +34,9 @@ import com.flatide.floodgate.agent.meta.MetaManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -88,9 +87,9 @@ public class DocumentTemplate {
                 //Path path = Paths.get(builtInTemplate + ".template");
                 //List<String> lines = Files.readAllLines(path);
 
-            	URL url = ClassLoader.getSystemClassLoader().getResource(builtInTemplate + ".template");
-            	String path = url.getPath();
-            	lines = Files.readAllLines(Paths.get(path));
+            	URL url = Thread.currentThread().getContextClassLoader().getResource(builtInTemplate + ".template");
+            	Path path = Paths.get(url.getPath());
+            	lines = Files.readAllLines(path);
             	
             	/*
                 ClassPathResource resource = new ClassPathResource(builtInTemplate + ".template");

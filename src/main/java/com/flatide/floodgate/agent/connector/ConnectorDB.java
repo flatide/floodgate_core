@@ -40,6 +40,8 @@ import java.sql.*;
 import java.sql.Date;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ConnectorDB extends ConnectorBase {
     // NOTE spring boot의 logback을 사용하려면 LogFactory를 사용해야 하나, 이 경우 log4j 1.x와 충돌함(SoapUI가 사용)
@@ -236,8 +238,50 @@ public class ConnectorDB extends ConnectorBase {
         if( sql != null ) {
             query = sql;
         } else {
-        }
+            query = "SELECT ";
+            Set<String> sourceSet = new LinkedHashSet<>();
 
+            for (MappingRuleItem item : rule.getRules()) {
+                switch(item.getAction()) {
+                    case system:
+                        break;
+                    case function:
+                        break;
+                    case literal:
+                        // it is possitble that source column is exist in literal 
+                        String source = item.getSourceName();
+
+                        Pattern pattern = Pattern.compile("\\$.+?\\$");
+                        Matcher matcher = pattern.matcher(source);
+
+                        while (matcher.find()) {
+                            String col = source.substring(matcher.start() + 1, matcher.end() - 1);
+                            sourceSet.add(col);
+                        }
+                        break;
+                    case reference:
+                        sourceSet.add(item.getSourceName());
+                        // source column
+                        break;
+                    case order:
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            int i = 0;
+            for (String source : sourceSet) {
+                if( i > 0 ) {
+                    query += ", ";
+                }
+                query += source;
+                i++;
+            }
+
+            query += " FROM " + table;
+            logger.debug(query);
+        }
 
         List<Map> result = new ArrayList<>();
         try(PreparedStatement ps = this.connection.prepareStatement(query)) {

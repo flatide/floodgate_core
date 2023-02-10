@@ -22,33 +22,21 @@
  * SOFTWARE.
  */
 
-package com.flatide.floodgate;
+package com.flatide.floodgate.agent.flow;
 
-public class ConfigurationManager {
-    private static final ConfigurationManager instance = new ConfigurationManager();
+import com.flatide.floodgate.agent.Context;
+import com.flatide.floodgate.agent.flow.stream.FGInputStream;
+import com.flatide.floodgate.agent.flow.module.Module;
+import com.flatide.floodgate.agent.flow.rule.MappingRule;
 
-    ConfigBase config;
+import java.util.Map;
 
-    private ConfigurationManager() {
-    }
-    
-    public static ConfigurationManager shared() {
-        return instance;
-    }
-    
-    public void setConfig(ConfigBase config) {
-        this.config = config;
-    }
+/*
+    Mockup for query generation
+*/
 
-    public Object get(String path) {
-        return this.config.get(path);
-    }
-
-    public String getString(String path) {
-        return (String) this.config.get(path);
-    }
-
-    public Integer getInteger(String path) {
-        return (Integer) this.config.get(path);
+public class FlowMockup extends Flow {
+    public FlowMockup(String id, Map<String, Object> flowInfo, Contexts agentContext, FGInputStream input) {
+        super(id, flowInfo, agentContext, input);
     }
 }

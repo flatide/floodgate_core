@@ -28,9 +28,11 @@ import com.flatide.floodgate.ConfigurationManager;
 import com.flatide.floodgate.FloodgateConstants;
 import com.flatide.floodgate.agent.template.DocumentTemplate;
 import com.flatide.floodgate.agent.connector.ConnectorTag;
+import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.connector.ConnectorBase;
 import com.flatide.floodgate.agent.flow.Flow;
 import com.flatide.floodgate.agent.flow.FlowContext;
+import com.flatide.floodgate.agent.flow.FlowMockup;
 import com.flatide.floodgate.agent.flow.FlowTag;
 import com.flatide.floodgate.agent.connector.ConnectorFactory;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
@@ -42,6 +44,7 @@ import com.flatide.floodgate.agent.meta.MetaManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -107,6 +110,33 @@ public class Module {
                 flowContext.add("CONNECT_INFO", connInfo);
                 flowContext.add("SEQUENCE", this.sequences);
                 try {
+                    if( this.flow instanceof FlowMockup ) {
+                        Context context = (Context) flowContext.get("CONTEXT");
+
+                        List<Map<String, Object>> itemList = (List) context.get("ITEM");
+                        List<Map<String, Object>> temp = new ArrayList<>();
+                        Map<String, Object> one = itemList.get(0);
+                        Map<String, Object> copy = new HashMap<>();
+                        for( Map.Entry<String, Object> e : one.entrySet() ) {
+                            copy.put(e.getKey(), "?");
+                        }
+                        temp.add(copy);
+
+                        String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
+                        MappingRule rule = flowContext.getRules().get(ruleName);
+                        String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
+                        rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
+
+                        String query = documentTemplate.makeHeader(flowContext, rule, temp);
+                        List<String> param = rule.getParam();
+
+                        for( String p : param ) {
+                            query = query.replaceFirst("\\?", p);
+                        }
+                        context.add("QUERY", query);
+                        return;
+                    }
+
                     connector.connect(flowContext);
 
                     String action = (String) this.sequences.get(FlowTag.ACTION.name());
@@ -135,9 +165,13 @@ public class Module {
                             String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
                             rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
 
-                            Payload payload = flowContext.getCurrent().subscribe();
-                            //Payload payload = context.getPayload();
+                            Payload payload = null;
 
+                            FGInputStream currentStream = flowContext.getCurrent();
+                            if( currentStream != null ) {
+                                Payload payload = flowContext.getCurrent().subscribe();
+                                //Payload payload = context.getPayload();
+                            }
                             //logger.info(data.toString());
                             connector.create(payload, rule);
 

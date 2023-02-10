@@ -24,31 +24,20 @@
 
 package com.flatide.floodgate;
 
-public class ConfigurationManager {
-    private static final ConfigurationManager instance = new ConfigurationManager();
+import com.flatide.floodgate.agent.logging.LoggingManager;
+import com.flatide.floodgate.agent.meta.MetaManager;
 
-    ConfigBase config;
+public class Floodgate {
+    public static void init() throws Exception {
+        String metaDatasource = (String) ConfigurationManager.shared().get("channel.meta.datasource");
+        MetaManager.shared().chageSource(metaDatasource, false);
 
-    private ConfigurationManager() {
-    }
-    
-    public static ConfigurationManager shared() {
-        return instance;
-    }
-    
-    public void setConfig(ConfigBase config) {
-        this.config = config;
-    }
+        String logDatasource = (String) ConfigurationManager.shared().get("channel.log.datasource");
+        LoggingManager.shared().changeSource(logDatasource, false);
 
-    public Object get(String path) {
-        return this.config.get(path);
-    }
-
-    public String getString(String path) {
-        return (String) this.config.get(path);
-    }
-
-    public Integer getInteger(String path) {
-        return (Integer) this.config.get(path);
-    }
+        MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_API));
+        MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW));
+        MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_DATASOURCE));
+        MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_TEMPLATE));
+   }
 }

@@ -24,7 +24,6 @@
 
 package com.flatide.floodgate.agent;
 
-import com.flatide.floodgate.agent.flow.module.Module;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
