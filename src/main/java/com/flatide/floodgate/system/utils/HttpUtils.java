@@ -137,7 +137,7 @@ public class HttpUtils {
                 return response.toString();
             }
 
-            BufferedReader in = new Bufferedreader(new InputStreamReader(con.getInputStream(), "UTF8"));
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), "UTF8"));
             String inputLine;
             StringBuffer response = new StringBuffer();
 
