@@ -86,6 +86,7 @@ public class HttpUtils {
 
         public Builder setReadTimeout(int mills) {
             this.readTimeout = mills;
+            return this;
         }
 
         public HttpUtils build() {
