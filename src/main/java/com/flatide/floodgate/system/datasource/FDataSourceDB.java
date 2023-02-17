@@ -27,6 +27,9 @@ package com.flatide.floodgate.system.datasource;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flatide.floodgate.ConfigurationManager;
 import com.flatide.floodgate.agent.meta.MetaManager;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -34,6 +37,8 @@ import java.io.BufferedReader;
 import java.io.Reader;
 import java.sql.*;
 import java.util.*;
+
+import javax.sql.DataSource;
 
 public class FDataSourceDB extends FDataSourceDefault {
     private static final Logger logger = LogManager.getLogger(MetaManager.class);
@@ -43,6 +48,7 @@ public class FDataSourceDB extends FDataSourceDefault {
     String url;
     String user;
     String password;
+    Integer maxPoolSize;
 
     public FDataSourceDB(String name) {
         super(name);
@@ -50,12 +56,23 @@ public class FDataSourceDB extends FDataSourceDefault {
         this.url = ConfigurationManager.shared().getString("datasource." + name + ".url");
         this.user = ConfigurationManager.shared().getString("datasource." + name + ".user");
         this.password = ConfigurationManager.shared().getString("datasource." + name + ".password");
+        this.maxPoolSize = ConfigurationManager.shared().getInteger("datasource." + name + ".maxPoolSize");
     }
 
     @Override
     public boolean connect() throws Exception {
+        DataSource dataSource = null;
         try {
-            this.connection = DriverManager.getConnection(this.url, this.user, this.password);
+            HikariConfig config = new HikariConfig();
+            config.setJdbcUrl(this.url);
+            config.setUsername(this.user);
+            config.setPassword(this.password);
+            config.setAutoCommit(false);
+            config.setMaximumPoolSize(this.maxPoolSize);
+            dataSource = new HikariDataSource(config);
+
+            this.connection = dataSource.getConnection();
+            //this.connection = DriverManager.getConnection(this.url, this.user, this.password);
             return true;
         } catch( Exception e ) {
             e.printStackTrace();

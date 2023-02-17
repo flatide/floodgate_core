@@ -41,7 +41,14 @@ public class Flow {
     public Flow(String id, Map<String, Object> flowInfo, Context agentContext, FGInputStream input) {
         this.flowContext = new FlowContext(id, flowInfo);
         this.flowContext.setCurrent(input);
-        this.flowContext.setEntry((String) flowInfo.get(FlowTag.ENTRY.name()));
+
+        String method = agentContext.getString(Context.CONTEXT_KEY.HTTP_REQUEST_METHOD);
+        Object entryMap = flowInfo.get(FlowTag.ENTRY.name());
+        if( entryMap instanceof Map) {
+            entryMap = (String)((Map<String, String>)entryMap).get(method);
+        }
+        this.flowContext.setEntry((String) entryMap);
+
         this.flowContext.setDebug((Boolean) flowInfo.get(FlowTag.DEBUG.name()));
         this.flowContext.add("CONTEXT", agentContext);
 

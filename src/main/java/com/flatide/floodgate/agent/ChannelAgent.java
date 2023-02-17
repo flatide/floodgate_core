@@ -82,32 +82,39 @@ public class ChannelAgent {
         LoggingManager.shared().insert(historyTable, "ID",  log);
 
 
-
         /*
             "TARGET": {
                 "": ["IF_ID1", "IF_ID2"],
                 "CD0001": ["IF_ID3"] }
          */
-        Map<String, List<String>> targetMap = (Map) apiInfo.get("TARGET");
-
         List<String> targetList = new ArrayList<>();
 
-        Map params = (Map) getContext(Context.CONTEXT_KEY.REQUEST_PARAMS);
-        String targets = (String) params.get("targets");
-        if( targets != null && !targets.isEmpty() ) {
-            String[] split = targets.split(",");
-            for( String t : split ) {
-                List<String> group = targetMap.get(t);
-                if( group != null ) {
-                    targetList.addAll(group);
-                } else {
-                    targetList.add(t.trim().toUpperCase());
+        Map<String, List<String>> targetMap = (Map) apiInfo.get("TARGET");
+        if( targetMap != null && !targetMap.isEmpty()) {
+            Map params = (Map) getContext(Context.CONTEXT_KEY.REQUEST_PARAMS);
+            String targets = (String) params.get("targets");
+
+            if( targets != null && !targets.isEmpty() ) {
+                String[] split = targets.split(",");
+                for( String t : split ) {
+                    List<String> group = targetMap.get(t);
+                    if( group != null ) {
+                        targetList.addAll(group);
+                    } else {
+                        targetList.add(t.trim().toUpperCase());
+                    }
                 }
+            } else {
+                // 아래 두가지 모두 가능
+                targetMap.values().stream().forEach(targetList::addAll);
+                //targetList = targetMap.values().stream().flatMap(x -> x.stream()).collect(Collectors.toList());
             }
         } else {
-            // 아래 두가지 모두 가능
-            targetMap.values().stream().forEach(targetList::addAll);
-            //targetList = targetMap.values().stream().flatMap(x -> x.stream()).collect(Collectors.toList());
+            Map paths = (Map) getContext(Context.CONTEXT_KEY.REQUEST_PATH_VARIABLES);
+            String target = (String) paths.get("target");
+            if( target != null ) {
+                targetList.add(target);
+            }
         }
 
         logger.debug(targetList);

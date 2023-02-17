@@ -104,7 +104,7 @@ public class Utils {
 
         try {
             socket = new Socket();
-            socket.connect(new InetSOcketAddress(ip.trim(), port), timeout);
+            socket.connect(new InetSocketAddress(ip.trim(), port), timeout);
             socket.close();
             socket = null;
 

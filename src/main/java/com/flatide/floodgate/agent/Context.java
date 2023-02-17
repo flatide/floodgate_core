@@ -40,8 +40,10 @@ public class Context {
     public enum CONTEXT_KEY {
         API,
         CHANNEL_ID,
+        REQUEST_PATH_VARIABLES,
         REQUEST_PARAMS,
-        REQUEST_BODY
+        REQUEST_BODY,
+        HTTP_REQUEST_METHOD
     }
 
     Map<String, Object> map = new HashMap<>();
@@ -60,6 +62,10 @@ public class Context {
 
     public void add(String key, Object value) {
         this.map.put(key, value);
+    }
+
+    public Object get(CONTEXT_KEY key) {
+        return get(key.name());
     }
 
     public Object get(String key) {
@@ -90,6 +96,10 @@ public class Context {
         return value;
     }
 
+    public String getString(CONTEXT_KEY key) {
+        return getString(key.name());
+    }
+
     public String getString(String key) {
         Object value = get(key);
         if( value != null ) {
@@ -103,13 +113,20 @@ public class Context {
         return null;
     }
 
+    public String getStringDefault(CONTEXT_KEY key, String defaultValue) {
+        return getStringDefault(key.name(), defaultValue);
+    }
+
     public String getStringDefault(String key, String defaultValue) {
         String ret = getString(key);
         if( ret == null ) {
             ret = defaultValue;
         }
-
         return ret;
+    }
+
+    public Integer getInteger(CONTEXT_KEY key) {
+        return getInteger(key.name());
     }
 
     public Integer getInteger(String key) {
@@ -123,10 +140,12 @@ public class Context {
         return null;
     }
 
+    public Integer getIntegerDefault(CONTEXT_KEY key, Integer defaultValue) {
+        return getIntegerDefault(key.name(), defaultValue);
+    }
+
     public Integer getIntegerDefault(String key, Integer defaultValue) {
-        Integer ret = getInteger(key);
-        if( ret == null ) {
-            ret = defaultValue;
+        Integer ret = getInteger(key); if( ret == null ) { ret = defaultValue;
         }
 
         return ret;

@@ -24,6 +24,8 @@
 
 package com.flatide.floodgate;
 
+import javax.sql.DataSource;
+
 import com.flatide.floodgate.agent.logging.LoggingManager;
 import com.flatide.floodgate.agent.meta.MetaManager;
 
