@@ -187,6 +187,9 @@ public final class MetaManager {
         if( /*output.get(key) == null || */fromSource) {
             try {
                 Map<String, Object> result = this.dataSource.read(tableName, keyName, key);
+                if( result == null ) {
+                    return null;
+                }
 
                 for(Entry<String, Object> e : result.entrySet()) {
                     Object obj = e.getValue();

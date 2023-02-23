@@ -145,7 +145,9 @@ public class Context {
     }
 
     public Integer getIntegerDefault(String key, Integer defaultValue) {
-        Integer ret = getInteger(key); if( ret == null ) { ret = defaultValue;
+        Integer ret = getInteger(key);
+        if( ret == null ) {
+            ret = defaultValue;
         }
 
         return ret;

@@ -59,6 +59,8 @@ public class ChannelAgent {
     public Object getContext(String key) { return this.context.get(key); }
 
     public Map<String, Object> process(FGInputStream current, String api) throws Exception {
+        Map<String, Object> result = new HashMap<>();
+
         // Unique ID 생성
         UUID id = UUID.randomUUID();
         addContext(Context.CONTEXT_KEY.CHANNEL_ID, id.toString());
@@ -68,6 +70,9 @@ public class ChannelAgent {
         // API 정보 확인
         String apiTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_API);
         Map apiMeta = MetaManager.shared().read( apiTable, api);
+        if( apiMeta == null ) {
+            throw new Exception("Cannot find resource " + api);
+        }
         Map apiInfo = (Map) apiMeta.get("DATA");
 
         Map<String, Object> log = new HashMap<>();
@@ -130,8 +135,6 @@ public class ChannelAgent {
 
             }
         }
-
-        Map<String, Object> result = new HashMap<>();
 
         String logString = "";
         try {
