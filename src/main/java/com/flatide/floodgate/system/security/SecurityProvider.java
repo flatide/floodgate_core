@@ -22,22 +22,9 @@
  * SOFTWARE.
  */
 
-package com.flatide.floodgate;
+ package com.flatide.floodgate.system.security;
 
-import com.flatide.floodgate.agent.logging.LoggingManager;
-import com.flatide.floodgate.agent.meta.MetaManager;
-
-public class Floodgate {
-    public static void init() throws Exception {
-        String metaDatasource = (String) ConfigurationManager.shared().get("channel.meta.datasource");
-        MetaManager.shared().changeSource(metaDatasource, false);
-
-        String logDatasource = (String) ConfigurationManager.shared().get("channel.log.datasource");
-        LoggingManager.shared().changeSource(logDatasource, false);
-
-        MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_API));
-        MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW));
-        MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_DATASOURCE));
-        MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_TEMPLATE));
-   }
-}
+ public interface SecurityProvider {
+     public String encrypt(String msg) throws Exception;
+     public String decrypt(String msg) throws Exception;
+ }
