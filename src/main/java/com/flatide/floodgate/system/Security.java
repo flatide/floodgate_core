@@ -1,4 +1,4 @@
-pakcage com.flatide.floodgate.system;
+package com.flatide.floodgate.system;
 
 public interface Security {
     public String encrypt(String msg);

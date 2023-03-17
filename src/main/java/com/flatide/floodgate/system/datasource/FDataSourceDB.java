@@ -243,6 +243,8 @@ public class FDataSourceDB extends FDataSourceDefault {
 
             ps.executeUpdate();
 
+            this.connection.commit();
+
             return true;
         } catch (Exception e) {
             e.printStackTrace();
@@ -303,6 +305,9 @@ public class FDataSourceDB extends FDataSourceDefault {
             ps.setString(i, key);
 
             int count = ps.executeUpdate();
+            
+            this.connection.commit();
+
             return count != 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -325,6 +330,9 @@ public class FDataSourceDB extends FDataSourceDefault {
             ps.setString(1, key);
 
             ps.execute();
+
+            this.connection.commit();
+
             return true;
         } catch (SQLException e) {
             e.printStackTrace();
