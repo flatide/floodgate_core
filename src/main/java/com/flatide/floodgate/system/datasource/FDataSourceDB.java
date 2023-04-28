@@ -112,7 +112,7 @@ public class FDataSourceDB extends FDataSourceDefault {
             @Override
             public String mapRow(ResultSet rs, int rowNum) throws SQLException {
                 return rs.getString(1);
-                }
+            }
         });
     }
 

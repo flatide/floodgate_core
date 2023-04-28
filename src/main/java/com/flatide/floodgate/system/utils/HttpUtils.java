@@ -194,7 +194,7 @@ public class HttpUtils {
             }
 
             if ( body != null) {
-                OutputStreamWriter wr = new OutputStreamWriter(con.getOutputStream(), "UTF-8");
+                OutputStreamWriter wr = new OutputStreamWriter(con.getOutputStream(), "UTF8");
                 wr.write(body);
                 wr.flush();
             }
@@ -230,7 +230,7 @@ public class HttpUtils {
         }
     }
 
-    public String postFil(InputStream is, String fileName, int fileLength) throws Exception {
+    public String postFile(InputStream is, String fileName, int fileLength) throws Exception {
         String boundary = Long.toHexString(System.currentTimeMillis());
         String CRLF = "\r\n";
 
@@ -261,12 +261,12 @@ public class HttpUtils {
                 con.setRequestProperty(key, this.properties.get(key));
             }
 
-            con.setRequestProperty("Content=Type", "multipart/form-data; boundary=" + boundary);
+            con.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
             try (OutputStream output = con.getOutputStream();
                     PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, "UTF-8"), true);
             ) {
                 writer.append("--" + boundary).append(CRLF);
-                writer.append("Content-Dispostion: form-data; name=\"file\"; filename=\"" + fileName + "\"")
+                writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"")
                     .append(CRLF);
                 writer.append("Content-Type: application/octet-stream").append(CRLF);
                 // writer.append("Content-Transfer-Encoding: binary").append(CRLF);
@@ -311,6 +311,7 @@ public class HttpUtils {
             throw e;
         } finally {
             if(con != null) try {con.disconnect();} catch(Exception e) {}
+            if(is != null) try {is.close();} catch(Exception e) {}
         }
     }
 }

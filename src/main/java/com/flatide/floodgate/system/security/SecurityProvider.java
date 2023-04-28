@@ -22,9 +22,9 @@
  * SOFTWARE.
  */
 
- package com.flatide.floodgate.system.security;
+package com.flatide.floodgate.system.security;
 
- public interface SecurityProvider {
-     public String encrypt(String msg) throws Exception;
-     public String decrypt(String msg) throws Exception;
- }
+public interface SecurityProvider {
+    public String encrypt(String msg) throws Exception;
+    public String decrypt(String msg) throws Exception;
+}

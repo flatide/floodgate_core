@@ -22,31 +22,31 @@
  * SOFTWARE.
  */
 
- package com.flatide.floodgate.system.security;
+package com.flatide.floodgate.system.security;
 
- public class FloodgateSecurity {
-     private SecurityProvider provider = null;
+public class FloodgateSecurity {
+    private SecurityProvider provider = null;
 
-     private FloodgateSecurity() {
-     }
+    private FloodgateSecurity() {
+    }
 
-     public static FloodgateSecurity shared() {
-         return LazyHolder.instance;
-     }
+    public static FloodgateSecurity shared() {
+        return LazyHolder.instance;
+    }
 
-     private static class LazyHolder {
-         private static final FloodgateSecurity instance = new FloodgateSecurity();
-     }
+    private static class LazyHolder {
+        private static final FloodgateSecurity instance = new FloodgateSecurity();
+    }
 
-     public void setSecurityProvider(SecurityProvider provider) {
-         this.provider = provider;
-     }
+    public void setSecurityProvider(SecurityProvider provider) {
+        this.provider = provider;
+    }
 
-     public String encrypt(String msg) throws Exception {
-         return this.provider.encrypt(msg);
-     }
+    public String encrypt(String msg) throws Exception {
+        return this.provider.encrypt(msg);
+    }
 
-     public String decrypt(String msg) throws Exception {
-         return this.provider.decrypt(msg);
-     }
- }
+    public String decrypt(String msg) throws Exception {
+        return this.provider.decrypt(msg);
+    }
+}
