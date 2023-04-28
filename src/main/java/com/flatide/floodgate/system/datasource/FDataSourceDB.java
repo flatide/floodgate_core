@@ -39,9 +39,14 @@ import java.sql.*;
 import java.util.*;
 
 import javax.sql.DataSource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.RowMapper;
 
 public class FDataSourceDB extends FDataSourceDefault {
     private static final Logger logger = LogManager.getLogger(MetaManager.class);
+
+    private final JdbcTemplate jdbcTemplate;
 
     Connection connection = null;
 
@@ -50,17 +55,14 @@ public class FDataSourceDB extends FDataSourceDefault {
     String password;
     Integer maxPoolSize;
 
-    public FDataSourceDB(String name) {
+    public FDataSourceDB(String name) throws Exception {
         super(name);
 
         this.url = ConfigurationManager.shared().getString("datasource." + name + ".url");
         this.user = ConfigurationManager.shared().getString("datasource." + name + ".user");
         this.password = ConfigurationManager.shared().getString("datasource." + name + ".password");
         this.maxPoolSize = ConfigurationManager.shared().getInteger("datasource." + name + ".maxPoolSize");
-    }
 
-    @Override
-    public boolean connect() throws Exception {
         DataSource dataSource = null;
         try {
             HikariConfig config = new HikariConfig();
@@ -71,13 +73,17 @@ public class FDataSourceDB extends FDataSourceDefault {
             config.setMaximumPoolSize(this.maxPoolSize);
             dataSource = new HikariDataSource(config);
 
-            this.connection = dataSource.getConnection();
-            //this.connection = DriverManager.getConnection(this.url, this.user, this.password);
-            return true;
         } catch( Exception e ) {
             e.printStackTrace();
             throw e;
         }
+
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
+    }
+
+    @Override
+    public boolean connect() throws Exception {
+        return true;
     }
 
     @Override
@@ -95,19 +101,19 @@ public class FDataSourceDB extends FDataSourceDefault {
         String query = "SELECT " + keyColumn + " FROM " + tableName;
         logger.debug(query);
 
-        ArrayList<String> result = new ArrayList<>();
-        try ( PreparedStatement ps = this.connection.prepareStatement(query); ResultSet rs = ps.executeQuery() ){
-            //ResultSetMetaData rsmeta = rs.getMetaData();
+        return jdbcTemplate.query(new PreparedStatementCreator() {
+            @Override
+            public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+                PreparedStatement psmt = con.prepareStatement(query);
 
-            while(rs.next()) {
-                String key = rs.getString(1);
-                result.add(key);
+                return psmt;
             }
-        } catch(SQLException e) {
-            e.printStackTrace();
-        }
-
-        return result;
+        }, new RowMapper<String>() {
+            @Override
+            public String mapRow(ResultSet rs, int rowNum) throws SQLException {
+                return rs.getString(1);
+                }
+        });
     }
 
     @Override
@@ -120,30 +126,7 @@ public class FDataSourceDB extends FDataSourceDefault {
         String query = "SELECT * FROM " + tableName + " WHERE " + keyColumn + " = ?";
         logger.debug(query);
 
-        try (PreparedStatement ps = this.connection.prepareStatement(query) ){
-            ps.setString(1, key);
-
-            try (ResultSet rs = ps.executeQuery() ) {
-
-                if (rs.next()) {
-                    Map<String, Object> row = new HashMap<>();
-
-                    ResultSetMetaData rsmeta = rs.getMetaData();
-                    int count = rsmeta.getColumnCount();
-                    for( int i = 1; i <= count; i++ ) {
-                        String name = rsmeta.getColumnName(i);
-                        Object obj = rs.getObject(i);
-
-                        row.put(name, obj);
-                    }
-                    return row;
-                }
-            }
-            return null;
-        } catch(SQLException e) {
-            e.printStackTrace();
-            throw e;
-        }
+        return (Map<String, Object>) jdbcTemplate.queryForMap(query, new String[] {key});
     }
 
     @Override
@@ -153,34 +136,11 @@ public class FDataSourceDB extends FDataSourceDefault {
             query += " WHERE " + keyColumn + " like ?";
         }
         logger.debug(query);
-
-        List<Map<String, Object>> result = new ArrayList<>();
-
-        try( PreparedStatement ps = this.connection.prepareStatement(query) ) {
-            if( key != null && !key.isEmpty()) {
-                ps.setString(1, "%" + key + "%");
-            }
-
-            try (ResultSet rs = ps.executeQuery() ) {
-                
-                while (rs.next()) {
-                    Map<String, Object> row = new HashMap<>();
-
-                    ResultSetMetaData rsmeta = rs.getMetaData();
-                    int count = rsmeta.getColumnCount();
-                    for( int i = 1; i <= count; i++) {
-                        String name = rsmeta.getColumnName(i);
-                        row.put(name, rs.getObject(i));
-                    }
-
-                    result.add(row);
-                }
-            }
-
-            return result;
-        } catch(SQLException e) {
-            e.printStackTrace();
-            throw e;
+        
+        if( key != null && !key.isEmpty()) {
+            return jdbcTemplate.queryForList(query, new String[] {"%" + key + "%"});
+        } else {
+            return jdbcTemplate.queryForList(query);
         }
     }
 
@@ -215,41 +175,43 @@ public class FDataSourceDB extends FDataSourceDefault {
 
         logger.debug(query.toString());
 
-        try (PreparedStatement ps = this.connection.prepareStatement(query.toString())) {
-            i = 1;
-            for(String col : colList ) {
-                Object data = row.get(col);
-                if( data == null ) {
-                    ps.setNull(i++, Types.NULL);
-                } else {
-                    if( data instanceof String ) {
-                        ps.setString(i++, (String) data);
-                    } else if( data instanceof Integer) {
-                        ps.setInt(i++, (Integer) data);
-                    } else if( data instanceof java.sql.Date) {
-                        ps.setDate(i++, (java.sql.Date) data);
-                    } else if( data instanceof java.sql.Time) {
-                        ps.setTime(i++, (java.sql.Time) data);
-                    } else if( data instanceof java.sql.Timestamp) {
-                        ps.setTimestamp(i++, (java.sql.Timestamp) data);
-                    } else {
-                        ObjectMapper mapper = new ObjectMapper();
-                        String json = mapper.writeValueAsString(data);
+        int count = jdbcTemplate.update(new PreparedStatementCreator() {
+            @Override
+            public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+                PreparedStatement psmt = con.prepareStatement(query.toString());
 
-                        ps.setString(i++, json);
+                int i = 1;
+                for (String col : colList) {
+                    Object data = row.get(col);
+                    if (data == null ) {
+                        psmt.setNull(i++, Types.NULL);
+                    } else {
+                        if( data instanceof String) {
+                            psmt.setString(i++, (String) data);
+                        } else if (data instanceof Integer) {
+                            psmt.setInt(i++, (Integer) data);
+                        } else if (data instanceof java.sql.Date) {
+                            psmt.setDate(i++, (java.sql.Date) data);
+                        } else if( data instanceof java.sql.Time) {
+                            psmt.setTime(i++, (java.sql.Time) data);
+                        } else if( data instanceof java.sql.Timestamp) {
+                            psmt.setTimestamp(i++, (java.sql.Timestamp) data);
+                        } else {
+                            ObjectMapper mapper = new ObjectMapper();
+                            try {
+                                String json = mapper.writeValueAsString(data);
+                                psmt.setString(i++, json);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                psmt.setObject(i++, data);
+                            }
+                        }
                     }
                 }
+                return psmt;
             }
-
-            ps.executeUpdate();
-
-            this.connection.commit();
-
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            throw e;
-        }
+        });
+        return count != 0;
     }
 
     @Override
@@ -276,43 +238,45 @@ public class FDataSourceDB extends FDataSourceDefault {
         query.append(" WHERE ID = ? ");
 
         logger.debug(query.toString());
+        int count = jdbcTemplate.update(new PreparedStatementCreator() {
+            @Override
+            public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+                PreparedStatement psmt = con.prepareStatement(query.toString());
 
-        try (PreparedStatement ps = this.connection.prepareStatement(query.toString())) {
-            i = 1;
-            for(String col : colList ) {
-                Object data = row.get(col);
-                if( data == null ) {
-                    ps.setNull(i++, Types.NULL);
-                } else {
-                    if( data instanceof String ) {
-                        ps.setString(i++, (String) data);
-                    } else if( data instanceof Integer) {
-                        ps.setInt(i++, (Integer) data);
-                    } else if( data instanceof java.sql.Date) {
-                        ps.setDate(i++, (java.sql.Date) data);
-                    } else if( data instanceof java.sql.Time) {
-                        ps.setTime(i++, (java.sql.Time) data);
-                    } else if( data instanceof java.sql.Timestamp) {
-                        ps.setTimestamp(i++, (java.sql.Timestamp) data);
+                int i = 1;
+
+                for(String col : colList ) {
+                    Object data = row.get(col);
+                    if( data == null ) {
+                        psmt.setNull(i++, Types.NULL);
                     } else {
-                        ObjectMapper mapper = new ObjectMapper();
-                        String json = mapper.writeValueAsString(data);
-
-                        ps.setString(i++, json);
+                        if( data instanceof String ) {
+                            psmt.setString(i++, (String) data);
+                        } else if( data instanceof Integer) {
+                            psmt.setInt(i++, (Integer) data);
+                        } else if( data instanceof java.sql.Date) {
+                            psmt.setDate(i++, (java.sql.Date) data);
+                        } else if( data instanceof java.sql.Time) {
+                            psmt.setTime(i++, (java.sql.Time) data);
+                        } else if( data instanceof java.sql.Timestamp) {
+                            psmt.setTimestamp(i++, (java.sql.Timestamp) data);
+                        } else {
+                            ObjectMapper mapper = new ObjectMapper();
+                            try {
+                                String json = mapper.writeValueAsString(data);
+                                psmt.setString(i++, json);
+                            } catch (Exception e) {
+                                psmt.setObject(i++, data);
+                            }
+                        }
                     }
                 }
+
+                return psmt;
             }
-            ps.setString(i, key);
+        });
 
-            int count = ps.executeUpdate();
-            
-            this.connection.commit();
-
-            return count != 0;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw e;
-        }
+        return count != 0;
     }
 
     @Override
@@ -324,20 +288,8 @@ public class FDataSourceDB extends FDataSourceDefault {
             .append(keyColumn)
             .append(" = ?" );
 
-        try (PreparedStatement ps = this.connection.prepareStatement(query.toString())) {
-            ps.setQueryTimeout(0);
-
-            ps.setString(1, key);
-
-            ps.execute();
-
-            this.connection.commit();
-
-            return true;
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw e;
-        }
+        int count = jdbcTemplate.update(query.toString(), key);
+        return count != 0;
     }
 
     @Override
