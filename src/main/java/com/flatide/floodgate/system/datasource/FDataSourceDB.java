@@ -153,7 +153,7 @@ public class FDataSourceDB extends FDataSourceDefault {
                         obj = ((oracle.sql.TIMESTAMP)obj).timestampValue();
                         map.put(name, obj);
                     } else if ( obj instanceof Clob) {
-                        // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                        // Jackson cannot convert LOB directly, converting it to String
                         final StringBuilder sb = new StringBuilder();
                         final Reader reader = ((Clob) obj).getCharacterStream();
                         final BufferedReader br = new BufferedReader(reader);
