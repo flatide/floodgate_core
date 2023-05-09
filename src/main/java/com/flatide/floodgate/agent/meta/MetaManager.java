@@ -187,35 +187,6 @@ public final class MetaManager {
         if( /*output.get(key) == null || */fromSource) {
             try {
                 Map<String, Object> result = this.dataSource.read(tableName, keyName, key);
-                if( result == null ) {
-                    return null;
-                }
-
-                for(Entry<String, Object> e : result.entrySet()) {
-                    Object obj = e.getValue();
-
-                    if( obj instanceof oracle.sql.TIMESTAMP) {
-                        // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
-                        obj = ((oracle.sql.TIMESTAMP)obj).timestampValue();
-                        result.put(e.getKey(), obj);
-                    } else if (obj instanceof Clob) {
-                        // Jackson cannot convert LOB directly, converting it to String
-                        final StringBuilder sb = new StringBuilder();
-                        final Reader reader = ((Clob) obj).getCharacterStream();
-                        final BufferedReader br = new BufferedReader(reader);
-
-                        int b;
-                        while (-1 != (b = br.read())) {
-                            sb.append((char) b);
-                        }
-
-                        br.close();
-
-                        ObjectMapper mapper = new ObjectMapper();
-                        Map json = mapper.readValue(sb.toString(), Map.class);
-                        result.put(e.getKey(), json);
-                    }
-                }
 
                 return result;
             } catch(Exception e ) {

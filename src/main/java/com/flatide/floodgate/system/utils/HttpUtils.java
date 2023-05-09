@@ -38,6 +38,8 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 public class HttpUtils {
     private String url;
     private Map<String, String> params;
@@ -163,6 +165,12 @@ public class HttpUtils {
         } finally {
             if(con != null) try {con.disconnect();} catch(Exception e) {}
         }
+    }
+
+    public String post(Map body) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        String jsonBody = mapper.writeValueAsString(body);
+        return post(jsonBody);
     }
 
     public String post(String body) throws Exception {

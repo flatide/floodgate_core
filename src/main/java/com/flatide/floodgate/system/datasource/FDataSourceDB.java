@@ -69,7 +69,7 @@ public class FDataSourceDB extends FDataSourceDefault {
             config.setJdbcUrl(this.url);
             config.setUsername(this.user);
             config.setPassword(this.password);
-            config.setAutoCommit(false);
+            config.setAutoCommit(true);
             config.setMaximumPoolSize(this.maxPoolSize);
             dataSource = new HikariDataSource(config);
 
@@ -126,7 +126,63 @@ public class FDataSourceDB extends FDataSourceDefault {
         String query = "SELECT * FROM " + tableName + " WHERE " + keyColumn + " = ?";
         logger.debug(query);
 
-        return (Map<String, Object>) jdbcTemplate.queryForMap(query, new String[] {key});
+        //return (Map<String, Object>) jdbcTemplate.queryForMap(query, new String[] {key});
+
+        List<Map<String, Object>> result = jdbcTemplate.query(new PreparedStatementCreator() {
+            @Override
+            public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+                PreparedStatement psmt = con.prepareStatement(query);
+                psmt.setString(1, key);
+
+                return psmt;
+            }
+        }, new RowMapper<Map<String, Object>>() {
+            @Override
+            public Map<String, Object> mapRow(ResultSet rs, int rowNum) throws SQLException {
+                Map<String, Object> map = new HashMap<>();
+
+                ResultSetMetaData rsMeta = rs.getMetaData();
+                int number = rsMeta.getColumnCount();
+
+                for( int i = 1; i <= number; i++ ) {
+                    String name = rsMeta.getColumnName(i);
+                    Object obj = rs.getObject(name);
+
+                    if( obj instanceof oracle.sql.TIMESTAMP) {
+                        // Jackson connot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                        obj = ((oracle.sql.TIMESTAMP)obj).timestampValue();
+                        map.put(name, obj);
+                    } else if ( obj instanceof Clob) {
+                        // Jackson connot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                        final StringBuilder sb = new StringBuilder();
+                        final Reader reader = ((Clob) obj).getCharacterStream();
+                        final BufferedReader br = new BufferedReader(reader);
+
+                        try {
+                            int b;
+                            while (-1 != (b = br.read())) {
+                                sb.append((char) b);
+                            }
+
+                            br.close();
+
+                            ObjectMapper mapper = new ObjectMapper();
+                            Map json = mapper.readValue(sb.toString(), Map.class);
+                            map.put(name, json);
+                        } catch (Exception e) {
+                            throw new SQLException(e);
+                        }
+                    }
+                }
+                return map;
+            }
+        });
+
+        if (result != null && result.size() > 0) {
+            return result.get(0);
+        }
+
+        return null;
     }
 
     @Override
@@ -137,6 +193,7 @@ public class FDataSourceDB extends FDataSourceDefault {
         }
         logger.debug(query);
         
+        // TODO modify using RowMapper
         if( key != null && !key.isEmpty()) {
             return jdbcTemplate.queryForList(query, new String[] {"%" + key + "%"});
         } else {
