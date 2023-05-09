@@ -149,11 +149,11 @@ public class FDataSourceDB extends FDataSourceDefault {
                     Object obj = rs.getObject(name);
 
                     if( obj instanceof oracle.sql.TIMESTAMP) {
-                        // Jackson connot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                        // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
                         obj = ((oracle.sql.TIMESTAMP)obj).timestampValue();
                         map.put(name, obj);
                     } else if ( obj instanceof Clob) {
-                        // Jackson connot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                        // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
                         final StringBuilder sb = new StringBuilder();
                         final Reader reader = ((Clob) obj).getCharacterStream();
                         final BufferedReader br = new BufferedReader(reader);
