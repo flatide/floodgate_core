@@ -58,6 +58,12 @@ public class ChannelAgent {
 
     public Object getContext(String key) { return this.context.get(key); }
 
+    public Map<String, Object> process(FGInputStream stream, String api, Map flow) throws Exception {
+        Map flowInfo = (Map) flow.get("FLOW");
+        addContext(Context.CONTEXT_KEY.FLOW, flowInfo);
+        return process(stream, api);
+    }
+
     public Map<String, Object> process(FGInputStream current, String api) throws Exception {
         Map<String, Object> result = new HashMap<>();
 
@@ -138,7 +144,6 @@ public class ChannelAgent {
 
         String logString = "";
         try {
-            String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
             Map<String, Object> concurrencyInfo = (Map<String, Object>) apiInfo.get("CONCURRENCY");
 
             // 병렬실행인 경우

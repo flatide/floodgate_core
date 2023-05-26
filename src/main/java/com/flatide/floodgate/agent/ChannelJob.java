@@ -105,12 +105,13 @@ public class ChannelJob implements Callable<Map> {
 
         Map<String, Object> result = new HashMap<>();
         try {
-            String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
-
-            Map flowMeta = MetaManager.shared().read( flowInfoTable, target);
-
-            Map<String, Object> flowInfo = (Map) flowMeta.get("DATA");
-            //Map<String, Object> flowInfo = (Map<String, Object>) flowInfoResult.get("FLOW");
+            // If FLOW exists in request body when API type is Instant Interfacing
+            Map<String, Object> flowInfo = (Map) this.context.get(Context.CONTEXT_KEY.FLOW.toString());
+            if( flowInfo == null ) {
+                String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
+                Map flowMeta = MetaManager.shared().read( flowInfoTable, target);
+                flowInfo = (Map) flowMeta.get("DATA");
+            }
 
             Object spooling = flowInfo.get(FlowTag.SPOOLING.name());
             if( spooling != null && (boolean) spooling) {
@@ -144,6 +145,7 @@ public class ChannelJob implements Callable<Map> {
                     result = (Map) carrier.getSnapshot();
                 } else {
                     result.put("result", "success");
+                    result.put("reason", "");
                 }
                 log.put("RESULT", "success");
             }

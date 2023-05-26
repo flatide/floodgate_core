@@ -329,6 +329,7 @@ public class FDataSourceDB extends FDataSourceDefault {
                     }
                 }
 
+                psmt.setString(i, key);
                 return psmt;
             }
         });

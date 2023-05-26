@@ -56,9 +56,17 @@ public class PushAgent extends Spoolable {
         Map<String, Object> result = new HashMap<>();
 
         try {
-            String tableName = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
-            Map<String, Object> flowInfoResult = MetaManager.shared().read( tableName, ifId);
-            Map<String, Object> flowInfo = (Map<String, Object>) flowInfoResult.get("FLOW");
+            //String tableName = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
+            //Map<String, Object> flowInfoResult = MetaManager.shared().read( tableName, ifId);
+            //Map<String, Object> flowInfo = (Map<String, Object>) flowInfoResult.get("FLOW");
+
+            // If FLOW exists in request body when API type is Instant Interfacing
+            Map<String, Object> flowInfo = (Map) this.context.get(Context.CONTEXT_KEY.FLOW.toString());
+            if( flowInfo == null ) {
+                String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
+                Map flowMeta = MetaManager.shared().read( flowInfoTable, ifId);
+                flowInfo = (Map) flowMeta.get("DATA");
+            }
             Flow flow = new Flow(ifId, flowInfo, this.context, data);
             flow.process();
         } catch(Exception e) {

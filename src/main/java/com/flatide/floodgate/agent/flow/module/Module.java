@@ -36,7 +36,7 @@ import com.flatide.floodgate.agent.flow.FlowMockup;
 import com.flatide.floodgate.agent.flow.FlowTag;
 import com.flatide.floodgate.agent.connector.ConnectorFactory;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
-import com.flatide.floodgate.agent.flow.stream.FGSharableInputCurrent;
+import com.flatide.floodgate.agent.flow.stream.FGSharableInputStream;
 import com.flatide.floodgate.agent.flow.stream.Payload;
 import com.flatide.floodgate.agent.flow.stream.carrier.container.JSONContainer;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
@@ -151,7 +151,7 @@ public class Module {
                             if("BYPASS".equals(sequences.get(FlowTag.RESULT.name()))) {
                                 Map<String, Object> data = new HashMap<>();
                                 data.put("ITEMS", result);
-                                FGInputStream stream = new FGSharableInputCurrent( new JSONContainer(data, "HEADER", "ITEMS") );
+                                FGInputStream stream = new FGSharableInputStream( new JSONContainer(data, "HEADER", "ITEMS") );
                                 flowContext.setCurrent(stream);
                             } else {
                                 flowContext.setCurrent(null);

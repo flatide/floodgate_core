@@ -26,7 +26,7 @@ package com.flatide.floodgate.agent.flow.stream;
 
 import com.flatide.floodgate.agent.flow.stream.carrier.Carrier;
 
-public class FGSharableInputCurrent extends FGInputStream {
+public class FGSharableInputStream extends FGInputStream {
     private int maxSubscriber = 1;
     private int currentSubscriber = 0;
     private int countOfCurrentDone = Integer.MAX_VALUE;
@@ -34,7 +34,7 @@ public class FGSharableInputCurrent extends FGInputStream {
     private Object currentData = null;
     private long currentSize = 0;
 
-    public FGSharableInputCurrent(Carrier carrier) {
+    public FGSharableInputStream(Carrier carrier) {
         super(carrier);
         try {
             this.currentSize = this.carrier.forward();

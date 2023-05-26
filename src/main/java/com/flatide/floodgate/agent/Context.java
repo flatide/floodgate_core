@@ -43,7 +43,8 @@ public class Context {
         REQUEST_PATH_VARIABLES,
         REQUEST_PARAMS,
         REQUEST_BODY,
-        HTTP_REQUEST_METHOD
+        HTTP_REQUEST_METHOD,
+        FLOW
     }
 
     Map<String, Object> map = new HashMap<>();

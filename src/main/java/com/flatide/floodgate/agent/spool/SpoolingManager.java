@@ -29,7 +29,7 @@ import com.flatide.floodgate.ConfigurationManager;
 import com.flatide.floodgate.FloodgateConstants;
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
-import com.flatide.floodgate.agent.flow.stream.FGSharableInputCurrent;
+import com.flatide.floodgate.agent.flow.stream.FGSharableInputStream;
 import com.flatide.floodgate.agent.flow.stream.carrier.container.JSONContainer;
 import com.flatide.floodgate.agent.meta.MetaManager;
 
@@ -53,7 +53,7 @@ public class SpoolingManager {
         Thread thread = new Thread( () -> {
             System.out.println("Spooling thread started...");
             String spoolingPath = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_SPOOLING_FOLDER);
-            String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
+            //String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
             String payloadPath = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_PAYLOAD_FOLDER);
             while(true) {
                 try {
@@ -66,16 +66,23 @@ public class SpoolingManager {
                     Map<String, Object> spoolingInfo = mapper.readValue(new File(spoolingPath + "/" + flowId), LinkedHashMap.class);
                     String target = (String) spoolingInfo.get("target");
 
-                    Map<String, Object> flowInfoResult = MetaManager.shared().read(flowInfoTable, target);
-                    Map<String, Object> flowInfo = (Map<String, Object>) flowInfoResult.get("FLOW");
+                    //Map<String, Object> flowInfoResult = MetaManager.shared().read(flowInfoTable, target);
+                    //Map<String, Object> flowInfo = (Map<String, Object>) flowInfoResult.get("FLOW");
 
                     Map<String, Object> spooledContext = (Map<String, Object>) spoolingInfo.get("context");
+                    // If FLOW exists in request body when API type is Instant Interfacing
+                    Map<String, Object> flowInfo = (Map) spooledContext.get(Context.CONTEXT_KEY.FLOW.toString());
+                    if( flowInfo == null ) {
+                        String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
+                        Map flowMeta = MetaManager.shared().read( flowInfoTable, target);
+                        flowInfo = (Map) flowMeta.get("DATA");
+                    }
 
                     String channel_id = (String) spooledContext.get(Context.CONTEXT_KEY.CHANNEL_ID.name());
 
                     @SuppressWarnings("unchecked")
                     Map<String, Object> payload = mapper.readValue(new File(payloadPath + "/" + channel_id), LinkedHashMap.class);
-                    FGInputStream current = new FGSharableInputCurrent(new JSONContainer(payload, "HEADER", "ITEMS"));
+                    FGInputStream current = new FGSharableInputStream(new JSONContainer(payload, "HEADER", "ITEMS"));
 
                     spooledContext.put(Context.CONTEXT_KEY.REQUEST_BODY.name(), payload);
                     Context context = new Context();

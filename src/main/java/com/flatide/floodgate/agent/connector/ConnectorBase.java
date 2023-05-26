@@ -74,7 +74,7 @@ public abstract class ConnectorBase implements Connector {
         this.password = this.context.getString("CONNECT_INFO." + ConnectorTag.PASSWORD.name());
 
         this.output = this.context.getString("SEQUENCE." + FlowTag.TARGET.name());
-        this.batchSize = this.context.getInteger("SEQUENCE." + FlowTag.BATCHSIZE.name());
+        this.batchSize = this.context.getIntegerDefault("SEQUENCE." + FlowTag.BATCHSIZE.name(), 1);
     }
 
     @Override
