@@ -131,11 +131,6 @@ public class ConnectorFile extends ConnectorBase {
     }
 
     @Override
-    public void check() {
-
-    }
-
-    @Override
     public void close() throws Exception {
         try {
             if (this.outputStream != null) {

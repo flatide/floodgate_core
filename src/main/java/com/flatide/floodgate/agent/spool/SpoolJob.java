@@ -57,7 +57,7 @@ class SpoolJob implements Callable<Map> {
 
     @Override
     public Map call() {
-        logger.info("Spooled Job " + flowId + " start in thread " + Thread.currentthread().getId());
+        logger.info("Spooled Job " + flowId + " start in thread " + Thread.currentThread().getId());
         String spoolingPath = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_SPOOLING_FOLDER);
 
         Map<String, Object> result = new HashMap<>();

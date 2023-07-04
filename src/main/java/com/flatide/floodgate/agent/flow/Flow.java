@@ -40,7 +40,7 @@ import java.util.UUID;
  */
 
 public class Flow {
-    private final Context flowContext;
+    private final Context context;
 
     private final String flowId;
     private final String targetId;
@@ -147,7 +147,7 @@ public class Flow {
             Module module = this.flowContext.next();
 
             if (!(this instanceof FlowMockup)) {
-                HandleManager.shared().handle(Step.MODULE_IN, this.context, module);
+                HandlerManager.shared().handle(Step.MODULE_IN, this.context, module);
             }
 
             try {

@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.flatide.floodgate.ConfigurationManager;
-import com.flatide.floodgate.FlodgateContants;
+import com.flatide.floodgate.FloodgateConstants;
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.flow.Flow;

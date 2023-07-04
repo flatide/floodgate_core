@@ -51,11 +51,11 @@ public class ChannelAgent {
         this.context = new Context();
     }
 
-    public void add(CONTEXT_KEY key, Object value) {
+    public void addContext(CONTEXT_KEY key, Object value) {
         this.context.add(key.name(), value);
     }
 
-    public Object get(CONTEXT_KEY key) {
+    public Object getContext(CONTEXT_KEY key) {
         return this.context.get(key.name());
     }
 
@@ -83,8 +83,6 @@ public class ChannelAgent {
             throw new Exception("Cannot find resource " + api);
         }
         Map apiInfo = (Map) apiMeta.get("DATA");
-
-        Map<String, Object> log = new HashMap<>();
 
         HandlerManager.shared().handle(Step.CHANNEL_IN, context, null);
 
@@ -132,7 +130,7 @@ public class ChannelAgent {
             try {
                 String path = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_PAYLOAD_FOLDER);
                 File folder = new File(path);
-                if (!folder.exist()) {
+                if (!folder.exists()) {
                     folder.mkdir();
                 }
                 carrier.flushToFile(path + "/" + id.toString());
@@ -198,11 +196,11 @@ public class ChannelAgent {
         addContext(CONTEXT_KEY.LATEST_RESULT, success ? "success" : "fail");
         addContext(CONTEXT_KEY.LATEST_MSG, logString);
 
-        HandleManager.shared().handle(Step.CHANEL_OUT, context, null);
+        HandlerManager.shared().handle(Step.CHANNEL_OUT, context, null);
 
         Map<String, Object> response = new HashMap<>();
         response.put("result", result);
 
-        return result;
+        return response;
     }
 }

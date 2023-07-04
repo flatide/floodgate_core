@@ -247,7 +247,7 @@ public class ConnectorDB extends ConnectorBase {
     public void rollback() throws SQLException {
         this.sent = 0;
         this.connection.rollback();
-        Context channelContext = (Context) contexts.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
+        Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
         this.module.setProgress(0);
         HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
     }
@@ -313,9 +313,9 @@ public class ConnectorDB extends ConnectorBase {
             logger.debug(query);
         }
 
-        Integer fetchSize = this.context.setIntegerDefault("SEQUENCE.FETCHSIZE", 0);
+        Integer fetchSize = this.context.getIntegerDefault("SEQUENCE.FETCHSIZE", 0);
         Integer sizeForUpdateHandler = fetchSize < 1000 ? 3000 : fetchSize * 3;
-        Boolean flush = (Boolean) this.context.getDefault("SEQUENCE.FLUSH", Boolean.valueOf(false)); 
+        Boolean flush = (Boolean) this.context.getDefault("SEQUENCE.FLUSH", Boolean.valueOf(false));
         List<Map> result = new ArrayList<>();
         try (PreparedStatement ps = this.connection.prepareStatement(query)) {
             ResultSet rs = ps.executeQuery();
@@ -342,7 +342,7 @@ public class ConnectorDB extends ConnectorBase {
 
                     result.add(column);
                 }
-                
+
                 c++;
                 if (c >= sizeForUpdateHandler) {
                     retrieve += c;
@@ -381,16 +381,16 @@ public class ConnectorDB extends ConnectorBase {
     public void count() throws Exception {
         Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
 
-        Stirng table = (String) this.context.get("SEQUENCE.TARGET");
-        String sql = (String) this.context.get("SEQUENCE.SQL");
-        String condition = (String) this.context.get("SEQUENCE.CONDITION");
+        String table = this.context.getString("SEQUENCE.TARGET");
+        String sql = this.context.getString("SEQUENCE.SQL");
+        String condition = this.context.getString("SEQUENCE.CONDITION");
 
         String query = "";
 
         if (sql != null) {
             query = sql;
         } else {
-            query = "SELECT COUNT(*) AS COUNT";
+            query = "SELECT COUNT(*) AS COUNT ";
             query += " FROM " + table;
             if (condition != null && !condition.isEmpty()) {
                 query += " WHERE " + condition;
@@ -398,14 +398,14 @@ public class ConnectorDB extends ConnectorBase {
             logger.debug(query);
         }
 
-        try (PreparedStatement ps = this.conneciton.prepareStatement(query)) {
+        try (PreparedStatement ps = this.connection.prepareStatement(query)) {
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 int count = rs.getInt("COUNT");
                 this.module.setProgress(count);
                 HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
-        } catch (Excepiton e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw e;
         }
@@ -477,11 +477,6 @@ public class ConnectorDB extends ConnectorBase {
             throw e;
         }
         return 0;
-    }
-
-    @Override
-    public void check() {
-
     }
 
     @Override

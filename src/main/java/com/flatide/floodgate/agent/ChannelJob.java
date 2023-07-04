@@ -27,7 +27,6 @@ package com.flatide.floodgate.agent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flatide.floodgate.ConfigurationManager;
 import com.flatide.floodgate.FloodgateConstants;
-import com.flatide.floodate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.flow.Flow;
 import com.flatide.floodgate.agent.flow.FlowTag;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
@@ -93,7 +92,7 @@ public class ChannelJob implements Callable<Map> {
                 flowInfo = (Map) flowMeta.get("DATA");
             }
 
-            String flowId = flow.getId();
+            String flowId = flow.getFlowId();
             HandlerManager.shared().handle(Step.FLOW_IN, context, flow);
 
             Object spooling = flowInfo.get(FlowTag.SPOOLING.name());
@@ -101,7 +100,7 @@ public class ChannelJob implements Callable<Map> {
                 // backup ChannelJob with flowId
                 String path = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_SPOOLING_FOLDER);
                 File folder = new File(path);
-                if (!folder.exist()) {
+                if (!folder.exists()) {
                     folder.mkdir();
                 }
 
@@ -127,7 +126,7 @@ public class ChannelJob implements Callable<Map> {
                 result.put("ID", flowId.toString());
                 log.put("RESULT", "spooled");
             } else {
-                flow = new Flow(flowInfo, current);
+                flow.prepare(flowInfo, current);
                 FGInputStream returnStream = flow.process();
                 if( returnStream != null ) {
                     Carrier carrier = returnStream.getCarrier();

@@ -67,7 +67,8 @@ public class PushAgent extends Spoolable {
                 Map flowMeta = MetaManager.shared().read( flowInfoTable, ifId);
                 flowInfo = (Map) flowMeta.get("DATA");
             }
-            Flow flow = new Flow(ifId, flowInfo, this.context, data);
+            Flow flow = new Flow(ifId, this.context);
+            flow.prepare(flowInfo, data);
             flow.process();
         } catch(Exception e) {
             e.printStackTrace();

@@ -101,6 +101,8 @@ public class SpoolingManager {
 
                         SpoolJob job = new SpoolJob(flowId, target, flowInfo, current, context);
                         executor[index].submit(job);
+                    } catch (InterruptedException e) {
+                        throw e;
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

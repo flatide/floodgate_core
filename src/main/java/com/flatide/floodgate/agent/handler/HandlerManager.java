@@ -74,18 +74,25 @@ public final class HandlerManager {
             switch (step) {
                 case CHANNEL_IN:
                 handler.handleChannelIn(context, object);
+                break;
                 case CHANNEL_OUT:
                 handler.handleChannelOut(context, object);
+                break;
                 case FLOW_IN:
                 handler.handleFlowIn(context, object);
+                break;
                 case FLOW_OUT:
                 handler.handleFlowOut(context, object);
+                break;
                 case MODULE_IN:
                 handler.handleModuleIn(context, object);
+                break;
                 case MODULE_OUT:
                 handler.handleModuleOut(context, object);
+                break;
                 case MODULE_PROGRESS:
                 handler.handleModuleProgress(context, object);
+                break;
             }
         }
     }
