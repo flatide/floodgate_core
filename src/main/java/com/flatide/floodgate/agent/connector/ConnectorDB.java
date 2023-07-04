@@ -26,10 +26,15 @@ package com.flatide.floodgate.agent.connector;
 
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.flow.rule.MappingRuleItem;
+import com.flatide.floodgate.agent.handler.HandlerManager;
+import com.flatide.floodgate.agent.handler.HandlerManager.Step;
 import com.flatide.floodgate.agent.template.DocumentTemplate;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
+import com.flatide.floodgate.agent.flow.module.Module;
 import com.flatide.floodgate.agent.flow.rule.FunctionProcessor;
 import com.flatide.floodgate.system.FlowEnv;
+import com.flatide.floodgate.system.security.FloodgateSecurity;
+
 //import com.zaxxer.hikari.HikariConfig;
 //import com.zaxxer.hikari.HikariDataSource;
 import org.apache.logging.log4j.LogManager;
@@ -117,10 +122,10 @@ public class ConnectorDB extends ConnectorBase {
     }
 
     @Override
-    public void connect(Context context) throws Exception {
+    public void connect(Context context, Module module) throws Exception {
         cur = System.currentTimeMillis();
 
-        super.connect(context);
+        super.connect(context, module);
 
         /*if( this.name != null && !this.name.isEmpty() ) {
             DataSource dataSource = pools.get(this.name);
@@ -134,6 +139,7 @@ public class ConnectorDB extends ConnectorBase {
             }
             this.connection = dataSource.getConnection();
         } else*/ {
+            this.password = FloodgateSecurity.shared().decrypt(this.password);
             this.connection = DriverManager.getConnection(this.url, this.user, this.password);
         }
 
@@ -155,6 +161,7 @@ public class ConnectorDB extends ConnectorBase {
 
     @Override
     public int creating(List<Map<String, Object>> itemList, MappingRule mappingRule, long index, int batchSize) throws Exception {
+        Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
         if( this.query.isEmpty()) {
             DocumentTemplate documentTemplate = getDocumentTemplate();
 
@@ -174,7 +181,7 @@ public class ConnectorDB extends ConnectorBase {
         //cur = System.currentTimeMillis();
         try (PreparedStatement ps = this.connection.prepareStatement(this.query)) {
             try {
-                int count = 0, transfer = 0;
+                int count = 0;
                 int timeout = this.context.getIntegerDefault("SEQUENCE.TIMEOUT", 0);
                 for (Map item : itemList) {
                     int i = 1;
@@ -196,9 +203,12 @@ public class ConnectorDB extends ConnectorBase {
                         ps.setQueryTimeout(timeout);
                         cur = System.currentTimeMillis();
                         ps.executeBatch();
-                        this.connection.commit();
-                        transfer += count;
+                        //this.connection.commit();
+                        this.sent += count;
                         count = 0;
+
+                        this.module.setProgress(this.sent);
+                        HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
                         logger.debug(System.currentTimeMillis() - this.cur);
                     }
 
@@ -212,14 +222,14 @@ public class ConnectorDB extends ConnectorBase {
                     ps.setQueryTimeout(timeout);
                     cur = System.currentTimeMillis();
                     ps.executeBatch();
-                    this.connection.commit();
-                    transfer += count;
+                    //this.connection.commit();
+                    this.sent += count;
+                    this.module.setProgress(this.sent);
+                    HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
                     logger.debug(System.currentTimeMillis() - this.cur);
                 }
                 //this.connection.commit();
-                this.sent = transfer;
             } catch (Exception e) {
-                //this.connection.rollback();
                 e.printStackTrace();
                 throw e;
             }
@@ -229,9 +239,26 @@ public class ConnectorDB extends ConnectorBase {
     }
 
     @Override
+    public void commit() throws SQLException {
+        this.connection.commit();
+    }
+
+    @Override
+    public void rollback() throws SQLException {
+        this.sent = 0;
+        this.connection.rollback();
+        Context channelContext = (Context) contexts.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
+        this.module.setProgress(0);
+        HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+    }
+
+    @Override
     public List<Map> read(MappingRule rule) throws Exception {
+        Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
+
         String table = (String) this.context.get("SEQUENCE.TARGET");
         String sql = (String) this.context.get("SEQUENCE.SQL");
+        String condition = (String) this.context.getString("SEQUENCE.CONDITION");
 
         String query = "";
 
@@ -248,7 +275,7 @@ public class ConnectorDB extends ConnectorBase {
                 case function:
                     break;
                 case literal:
-                    // it is possitble that source column is exist in literal 
+                    // it is possible that source column is exist in literal 
                     String source = item.getSourceName();
 
                     Pattern pattern = Pattern.compile("\\$.+?\\$");
@@ -280,29 +307,54 @@ public class ConnectorDB extends ConnectorBase {
             }
 
             query += " FROM " + table;
+            if (condition != null && !condition.isEmpty()) {
+                query += " WHERE " + condition;
+            }
             logger.debug(query);
         }
 
+        Integer fetchSize = this.context.setIntegerDefault("SEQUENCE.FETCHSIZE", 0);
+        Integer sizeForUpdateHandler = fetchSize < 1000 ? 3000 : fetchSize * 3;
+        Boolean flush = (Boolean) this.context.getDefault("SEQUENCE.FLUSH", Boolean.valueOf(false)); 
         List<Map> result = new ArrayList<>();
-        try(PreparedStatement ps = this.connection.prepareStatement(query)) {
+        try (PreparedStatement ps = this.connection.prepareStatement(query)) {
             ResultSet rs = ps.executeQuery();
+            if (fetchSize > 0 ) {
+                rs.setFetchSize(fetchSize);
+            }
             ResultSetMetaData rsmeta = rs.getMetaData();
 
             int count = rsmeta.getColumnCount();
-            while(rs.next() ) {
-                Map<String, Object> column = new LinkedHashMap<>();
-                for( int i = 1; i <= count; i++ ) {
-                    Object row = rs.getObject(i);
+            int c = 0, retrieve = 0;
+            while (rs.next()) {
+                if (!flush) {
+                    Map<String, Object> column = new LinkedHashMap<>();
+                    for (int i = 1; i <= count; i++) {
+                        Object row = rs.getObject(i);
 
-                    if( row instanceof oracle.sql.TIMESTAMP) {
-                        // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
-                        row = ((oracle.sql.TIMESTAMP)row).timestampValue();
+                        if (row instanceof oracle.sql.TIMESTAMP) {
+                            // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                            row = ((oracle.sql.TIMESTAMP)row).timestampValue();
+                        }
+                        // TODO process Clob and skip Blob
+                        column.put(rsmeta.getColumnLabel(i), row);
                     }
-                    // TODO process Clob and skip Blob
-                    column.put(rsmeta.getColumnLabel(i), row);
-                }
 
-                result.add(column);
+                    result.add(column);
+                }
+                
+                c++;
+                if (c >= sizeForUpdateHandler) {
+                    retrieve += c;
+                    c = 0;
+                    this.module.setProgress(retrieve);
+                    HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                }
+            }
+            if (c>0) {
+                retrieve += c;
+                this.module.setProgress(retrieve);
+                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
         } catch(Exception e) {
             e.printStackTrace();
@@ -310,6 +362,53 @@ public class ConnectorDB extends ConnectorBase {
         }
 
         return result;
+    }
+
+    @Override
+    public void check() throws Exception {
+        String table = (String) this.context.get("SEQUENCE.TARGET");
+
+        DatabaseMetaData databaseMetaData = this.connection.getMetaData();
+        ResultSet resultSet = databaseMetaData.getTables(null, null, table, new String[] {"TABLE"});
+        boolean exist = resultSet.next();
+
+        if (!exist) {
+            throw new Exception(table + " is not exist.");
+        }
+    }
+
+    @Override
+    public void count() throws Exception {
+        Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
+
+        Stirng table = (String) this.context.get("SEQUENCE.TARGET");
+        String sql = (String) this.context.get("SEQUENCE.SQL");
+        String condition = (String) this.context.get("SEQUENCE.CONDITION");
+
+        String query = "";
+
+        if (sql != null) {
+            query = sql;
+        } else {
+            query = "SELECT COUNT(*) AS COUNT";
+            query += " FROM " + table;
+            if (condition != null && !condition.isEmpty()) {
+                query += " WHERE " + condition;
+            }
+            logger.debug(query);
+        }
+
+        try (PreparedStatement ps = this.conneciton.prepareStatement(query)) {
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt("COUNT");
+                this.module.setProgress(count);
+                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+            }
+        } catch (Excepiton e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     /*

@@ -48,30 +48,71 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class Module {
     // NOTE spring boot의 logback을 사용하려면 LogFactory를 사용해야 하나, 이 경우 log4j 1.x와 충돌함(SoapUI가 사용)
     private static final Logger logger = LogManager.getLogger(Module.class);
 
     private final String id;
+    private final String name;
     private final Map<String, Object> sequences;
     private final Flow flow;
 
+    private Integer progress = 0;
 
-    public Module(Flow flow, String id, Map<String, Object> data) {
+    private String result;
+    private String msg;
+
+    public Module(Flow flow, String name, Map<String, Object> data) {
         this.flow = flow;
-        this.id = id;
+        this.name = name;
         this.sequences = data;
+
+        UUID id = UUID.randomUUID();
+        this.id = id.toString();
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setProgress(Integer progress) {
+        this.progress = progress;
+    }
+
+    public Integer getProgress() {
+        return progress;
+    }
+
+    public String getResult() {
+        return result;
+    }
+    
+    public void setResult(String result) {
+        this.result = result;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public Flow getFlow() {
+        return this.flow;
     }
 
     /*
         FlowContext의 input에 대한 처리
     */
     public void processBefore(FlowContext flowContext) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> before = (Map<String, Object>) this.sequences.get(FlowTag.BEFORE.name());
-        if (before != null) {
-        }
     }
 
     public void process(FlowContext flowContext) throws Exception {
@@ -81,7 +122,7 @@ public class Module {
             Object connectRef = this.sequences.get(FlowTag.CONNECT.name());
             Map connInfo;
             if (connectRef == null) {
-                logger.info(flowContext.getId() + " : No connect info for module " + this.id);
+                logger.info(flowContext.getId() + " : No connect info for module " + this.name);
             } else {
                 if (connectRef instanceof String) {
                     String table = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_DATASOURCE);
@@ -111,7 +152,7 @@ public class Module {
                 flowContext.add("SEQUENCE", this.sequences);
                 try {
                     if( this.flow instanceof FlowMockup ) {
-                        Context context = (Context) flowContext.get("CONTEXT");
+                        Context context = (Context) flowContext.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
 
                         List<Map<String, Object>> itemList = (List) context.get("ITEM");
                         List<Map<String, Object>> temp = new ArrayList<>();
@@ -137,11 +178,23 @@ public class Module {
                         return;
                     }
 
-                    connector.connect(flowContext);
+                    connector.connect(flowContext, this);
 
                     String action = (String) this.sequences.get(FlowTag.ACTION.name());
 
                     switch(FlowTag.valueOf(action)) {
+                        case CHECK:
+                        {
+                            connector.check();
+                            flowContext.setCurrent(null);
+                            break;
+                        }
+                        case COUNT:
+                        {
+                            connector.count();
+                            flowContext.setCurrent(null);
+                            break;
+                        }
                         case READ:
                         {
                             String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
@@ -201,9 +254,5 @@ public class Module {
         FlowContext의 output에 대한 처리
      */
     public void processAfter(FlowContext context) {
-        @SuppressWarnings("unchecked")
-        Map<String, Object> after = (Map<String, Object>) this.sequences.get(FlowTag.AFTER.name());
     }
-
-
 }

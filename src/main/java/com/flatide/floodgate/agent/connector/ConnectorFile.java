@@ -28,6 +28,7 @@ import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 import com.flatide.floodgate.agent.flow.rule.MappingRuleItem;
 import com.flatide.floodgate.agent.flow.rule.FunctionProcessor;
+import com.flatide.floodgate.agent.flow.module.Module;
 import com.flatide.floodgate.system.FlowEnv;
 
 import java.io.BufferedOutputStream;
@@ -73,8 +74,8 @@ public class ConnectorFile extends ConnectorBase {
     }
 
     @Override
-    public void connect(Context context) throws Exception {
-        super.connect(context);
+    public void connect(Context context, Module module) throws Exception {
+        super.connect(context, module);
 
         String filename = context.evaluate(getOutput());
         this.outputStream = new BufferedOutputStream(new FileOutputStream(new File(this.url + "/" + filename)));

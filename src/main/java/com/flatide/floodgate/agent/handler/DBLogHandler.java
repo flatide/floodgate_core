@@ -22,38 +22,45 @@
  * SOFTWARE.
  */
 
-package com.flatide.floodgate.agent.flow;
+package com.flatide.floodgate.agent.handler;
 
-public enum FlowTag {
-    ENTRY,
-    DEBUG,
-    SPOOLING,
-    MODULE,
-    RULE,
-    FILTER,
+import java.util.HashMap;
+import java.util.Map;
 
-    // For Module
-    BEFORE,
-    AFTER,
-    RESULT,
-    CALL,
+import com.flatide.floodgate.ConfigurationManager;
+import com.flatide.floodgate.FlodgateContants;
+import com.flatide.floodgate.agent.Context;
+import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
+import com.flatide.floodgate.agent.flow.Flow;
+import com.flatide.floodgate.agent.flow.module.Module;
+import com.flatide.floodgate.agent.logging.LoggingManager;
 
-    CONNECT,
-    TEMPLATE,
-    //OUTPUT,
-    TARGET,
-    BATCHSIZE,
-    FETCHSIZE,
-    ACTION,
-    TIMEOUT,
-    LIMIT,
+public class DBLogHandler implements FloodgateAbstractHandler {
+    @Override
+    public void handleChannelIn(Context context, Object object) {
+    }
 
-    // For Action
+    @Override
+    public void handleChannelOut(Context context, Object object) {
+    }
 
-    CHECK,
-    COUNT,
-    CREATE,
-    READ,
-    UPDATE,
-    DELETE
+    @Override
+    public void handleFlowIn(Context context, Object object) {
+    }
+
+    @Override
+    public void handleFlowOut(Context context, Object object) {
+    }
+
+    @Override
+    public void handleModuleIn(Context context, Object object) {
+    }
+
+    @Override
+    public void handleModuleOut(Context context, Object object) {
+    }
+
+    @Override
+    public void handleModuleProgress(Context context, Object object) {
+    }
 }

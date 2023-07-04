@@ -27,6 +27,7 @@ package com.flatide.floodgate.agent.spool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flatide.floodgate.ConfigurationManager;
 import com.flatide.floodgate.FloodgateConstants;
+import com.flatide.floodgate.agent.ChannelAgent;
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
 import com.flatide.floodgate.agent.flow.stream.FGSharableInputStream;
@@ -38,7 +39,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class SpoolingManager {
+    private static final Logger logger = LogManager.getLogger(SpoolingManager.class);
+
     private static final SpoolingManager instance = new SpoolingManager();
 
     LinkedBlockingQueue<String> queue = new LinkedBlockingQueue<>();
@@ -46,57 +52,61 @@ public class SpoolingManager {
     ThreadPoolExecutor[] executor = new ThreadPoolExecutor[4];
 
     private SpoolingManager() {
-        for(int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             this.executor[i] = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         }
 
         Thread thread = new Thread( () -> {
-            System.out.println("Spooling thread started...");
+            logger.info("Spooling thread started...");
             String spoolingPath = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_SPOOLING_FOLDER);
             //String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
             String payloadPath = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_PAYLOAD_FOLDER);
-            while(true) {
-                try {
-                    long cur = System.currentTimeMillis();
+            try {
+                while (true) {
+                    try {
+                        long cur = System.currentTimeMillis();
 
-                    String flowId = this.queue.take();
+                        String flowId = this.queue.take();
 
-                    ObjectMapper mapper = new ObjectMapper();
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> spoolingInfo = mapper.readValue(new File(spoolingPath + "/" + flowId), LinkedHashMap.class);
-                    String target = (String) spoolingInfo.get("target");
+                        ObjectMapper mapper = new ObjectMapper();
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> spoolingInfo = mapper.readValue(new File(spoolingPath + "/" + flowId), LinkedHashMap.class);
+                        String target = (String) spoolingInfo.get("target");
 
-                    //Map<String, Object> flowInfoResult = MetaManager.shared().read(flowInfoTable, target);
-                    //Map<String, Object> flowInfo = (Map<String, Object>) flowInfoResult.get("FLOW");
+                        //Map<String, Object> flowInfoResult = MetaManager.shared().read(flowInfoTable, target);
+                        //Map<String, Object> flowInfo = (Map<String, Object>) flowInfoResult.get("FLOW");
 
-                    Map<String, Object> spooledContext = (Map<String, Object>) spoolingInfo.get("context");
-                    // If FLOW exists in request body when API type is Instant Interfacing
-                    Map<String, Object> flowInfo = (Map) spooledContext.get(Context.CONTEXT_KEY.FLOW.toString());
-                    if( flowInfo == null ) {
-                        String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
-                        Map flowMeta = MetaManager.shared().read( flowInfoTable, target);
-                        flowInfo = (Map) flowMeta.get("DATA");
+                        Map<String, Object> spooledContext = (Map<String, Object>) spoolingInfo.get("context");
+                        // If FLOW exists in request body when API type is Instant Interfacing
+                        Map<String, Object> flowInfo = (Map) spooledContext.get(Context.CONTEXT_KEY.FLOW.toString());
+                        if( flowInfo == null ) {
+                            String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
+                            Map flowMeta = MetaManager.shared().read( flowInfoTable, target);
+                            flowInfo = (Map) flowMeta.get("DATA");
+                        }
+
+                        String channel_id = (String) spooledContext.get(Context.CONTEXT_KEY.CHANNEL_ID.name());
+
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> payload = mapper.readValue(new File(payloadPath + "/" + channel_id), LinkedHashMap.class);
+                        FGInputStream current = new FGSharableInputStream(new JSONContainer(payload, "HEADER", "ITEMS"));
+
+                        spooledContext.put(Context.CONTEXT_KEY.REQUEST_BODY.name(), payload);
+                        Context context = new Context();
+                        context.setMap(spooledContext);
+
+
+                        // 동일 target은 동일 쓰레드에서만 순차적으로 처리될 수 있도록 한다
+                        int index = target.charAt(target.length() - 1) % 4;
+
+                        SpoolJob job = new SpoolJob(flowId, target, flowInfo, current, context);
+                        executor[index].submit(job);
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-
-                    String channel_id = (String) spooledContext.get(Context.CONTEXT_KEY.CHANNEL_ID.name());
-
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> payload = mapper.readValue(new File(payloadPath + "/" + channel_id), LinkedHashMap.class);
-                    FGInputStream current = new FGSharableInputStream(new JSONContainer(payload, "HEADER", "ITEMS"));
-
-                    spooledContext.put(Context.CONTEXT_KEY.REQUEST_BODY.name(), payload);
-                    Context context = new Context();
-                    context.setMap(spooledContext);
-
-
-                    // 동일 target은 동일 쓰레드에서만 순차적으로 처리될 수 있도록 한다
-                    int index = target.charAt(target.length() - 1) % 4;
-
-                    SpoolJob job = new SpoolJob(flowId, target, flowInfo, current, context);
-                    executor[index].submit(job);
-                } catch (Exception e) {
-                    e.printStackTrace();
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupted();
             }
         });
 

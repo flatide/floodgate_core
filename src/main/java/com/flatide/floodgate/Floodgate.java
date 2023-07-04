@@ -24,6 +24,9 @@
 
 package com.flatide.floodgate;
 
+import com.flatide.floodgate.agent.handler.DBLogHandler;
+import com.flatide.floodgate.agent.handler.FileLogHandler;
+import com.flatide.floodgate.agent.handler.HandlerManager;
 import com.flatide.floodgate.agent.logging.LoggingManager;
 import com.flatide.floodgate.agent.meta.MetaManager;
 
@@ -39,5 +42,11 @@ public class Floodgate {
         MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW));
         MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_DATASOURCE));
         MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_TEMPLATE));
+
+       FileLogHandler fileHandler = new FileLogHandler();
+       HandlerManager.shared().addHandler("Default File Log Handler", fileHandler);
+
+       DBLogHandler dbHandler = new DBLogHandler();
+       HandlerManager.shared().addHandler("Default DB Log Handler", dbHandler);
    }
 }

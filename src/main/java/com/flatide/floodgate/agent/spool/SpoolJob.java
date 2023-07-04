@@ -35,7 +35,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 class SpoolJob implements Callable<Map> {
+    private static final Logger logger = LogManager.getLogger(SpoolJob.class);
+
     String flowId;
     String target;
     Map<String, Object> flowInfo;
@@ -52,16 +57,18 @@ class SpoolJob implements Callable<Map> {
 
     @Override
     public Map call() {
-        System.out.println("Spooled Job " + flowId + " start at : " + Thread.currentThread().getId());
+        logger.info("Spooled Job " + flowId + " start in thread " + Thread.currentthread().getId());
         String spoolingPath = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_SPOOLING_FOLDER);
 
         Map<String, Object> result = new HashMap<>();
         try {
+            Flow flow = new Flow(flowId, this.target, context);
+            flow.prepare(flowInfo, current);
 
-            Flow flow = new Flow(flowId, flowInfo, context, current);
             flow.process();
+
             result.put("result", "success");
-            System.out.println("Spooled Job " + flowId + " completed.");
+            logger.info("Spooled Job " + flowId + " completed.");
 
             try {
                 File file = new File(spoolingPath + "/" + flowId);
@@ -73,7 +80,7 @@ class SpoolJob implements Callable<Map> {
             e.printStackTrace();
             result.put("result", "fail");
             result.put("reason", e.getMessage());
-            System.out.println("Spooled Job " + flowId + " failed with : " + e.getMessage());
+            logger.info("Spooled Job " + flowId + " failed. : " + e.getMessage());
         }
 
         return result;

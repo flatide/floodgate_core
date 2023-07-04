@@ -26,11 +26,14 @@ package com.flatide.floodgate.agent;
 
 import com.flatide.floodgate.ConfigurationManager;
 import com.flatide.floodgate.FloodgateConstants;
+import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
 import com.flatide.floodgate.agent.flow.stream.carrier.Carrier;
-import com.flatide.floodgate.agent.logging.LoggingManager;
+import com.flatide.floodgate.agent.handler.HandlerManager;
+import com.flatide.floodgate.agent.handler.HandlerManager.Step;
 import com.flatide.floodgate.agent.meta.*;
 
+import java.io.File;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -48,11 +51,11 @@ public class ChannelAgent {
         this.context = new Context();
     }
 
-    public void addContext(Context.CONTEXT_KEY key, Object value) {
+    public void add(CONTEXT_KEY key, Object value) {
         this.context.add(key.name(), value);
     }
 
-    public Object getContext(Context.CONTEXT_KEY key) {
+    public Object get(CONTEXT_KEY key) {
         return this.context.get(key.name());
     }
 
@@ -60,7 +63,7 @@ public class ChannelAgent {
 
     public Map<String, Object> process(FGInputStream stream, String api, Map flow) throws Exception {
         Map flowInfo = (Map) flow.get("FLOW");
-        addContext(Context.CONTEXT_KEY.FLOW, flowInfo);
+        addContext(CONTEXT_KEY.FLOW, flowInfo);
         return process(stream, api);
     }
 
@@ -69,9 +72,9 @@ public class ChannelAgent {
 
         // Unique ID 생성
         UUID id = UUID.randomUUID();
-        addContext(Context.CONTEXT_KEY.CHANNEL_ID, id.toString());
+        addContext(CONTEXT_KEY.CHANNEL_ID, id.toString());
 
-        addContext(Context.CONTEXT_KEY.API, api);
+        addContext(CONTEXT_KEY.API, api);
 
         // API 정보 확인
         String apiTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_API);
@@ -83,15 +86,7 @@ public class ChannelAgent {
 
         Map<String, Object> log = new HashMap<>();
 
-        //Date startTime = new Date(System.currentTimeMillis());
-        long start = System.currentTimeMillis();
-        java.sql.Timestamp startTime = new java.sql.Timestamp(start);
-        log.put("ID", id.toString());
-        log.put("API_ID", api);
-        log.put("START_TIME", startTime);
-        String historyTable = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_LOG_TABLE_FOR_API);
-        LoggingManager.shared().insert(historyTable, "ID",  log);
-
+        HandlerManager.shared().handle(Step.CHANNEL_IN, context, null);
 
         /*
             "TARGET": {
@@ -102,7 +97,7 @@ public class ChannelAgent {
 
         Map<String, List<String>> targetMap = (Map) apiInfo.get("TARGET");
         if( targetMap != null && !targetMap.isEmpty()) {
-            Map params = (Map) getContext(Context.CONTEXT_KEY.REQUEST_PARAMS);
+            Map params = (Map) getContext(CONTEXT_KEY.REQUEST_PARAMS);
             String targets = (String) params.get("targets");
 
             if( targets != null && !targets.isEmpty() ) {
@@ -121,7 +116,7 @@ public class ChannelAgent {
                 //targetList = targetMap.values().stream().flatMap(x -> x.stream()).collect(Collectors.toList());
             }
         } else {
-            Map paths = (Map) getContext(Context.CONTEXT_KEY.REQUEST_PATH_VARIABLES);
+            Map paths = (Map) getContext(CONTEXT_KEY.REQUEST_PATH_VARIABLES);
             String target = (String) paths.get("target");
             if( target != null ) {
                 targetList.add(target);
@@ -136,6 +131,10 @@ public class ChannelAgent {
             Carrier carrier = current.getCarrier();
             try {
                 String path = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_PAYLOAD_FOLDER);
+                File folder = new File(path);
+                if (!folder.exist()) {
+                    folder.mkdir();
+                }
                 carrier.flushToFile(path + "/" + id.toString());
             } catch(Exception e) {
 
@@ -186,15 +185,24 @@ public class ChannelAgent {
             logString = e.getMessage();
         }
 
-        //Date endTime = new Date(System.currentTimeMillis());
-        long end = System.currentTimeMillis();
-        java.sql.Timestamp endTime = new java.sql.Timestamp(end);
+        boolean success = true;
+        for (Map.Entry<String, Object> entry : result.entrySet()) {
+            Map v = (Map) entry.getValue();
+            String r = (String) v.get("result");
+            if ("fail".equals(r)) {
+                success = false;
+                break;
+            }
+        }
 
-        log.put("ID", id.toString());
-        log.put("END_TIME", endTime);
-        log.put("LOG", logString);
-        LoggingManager.shared().update(historyTable, "ID", log);
-        logger.info(String.format("%s (%s) is done : %s ms", id, api, end - start));
+        addContext(CONTEXT_KEY.LATEST_RESULT, success ? "success" : "fail");
+        addContext(CONTEXT_KEY.LATEST_MSG, logString);
+
+        HandleManager.shared().handle(Step.CHANEL_OUT, context, null);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("result", result);
+
         return result;
     }
 }

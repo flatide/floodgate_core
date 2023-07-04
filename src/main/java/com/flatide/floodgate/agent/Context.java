@@ -40,11 +40,24 @@ public class Context {
     public enum CONTEXT_KEY {
         API,
         CHANNEL_ID,
+        
         REQUEST_PATH_VARIABLES,
         REQUEST_PARAMS,
         REQUEST_BODY,
         HTTP_REQUEST_METHOD,
-        FLOW
+
+        FLOW,
+
+        CHANNEL_CONTEXT,
+        FLOW_CONTEXT,
+
+        CHANNEL_START_TIME,
+        CHANNEL_ELAPSED,
+        FLOW_START_TIME,
+        MODULE_START_TIME,
+
+        LATEST_RESULT,
+        LATEST_MSG,
     }
 
     Map<String, Object> map = new HashMap<>();
@@ -65,8 +78,24 @@ public class Context {
         this.map.put(key, value);
     }
 
+    public void add(CONTEXT_KEY key, Object value) {
+        add(key.name(), value);
+    }
+
     public Object get(CONTEXT_KEY key) {
         return get(key.name());
+    }
+
+    public Object getDefault(CONTEXT_KEY key, Object defaultValue) {
+        return getDefault(key.name(), defaultValue);
+    }
+
+    public Object getDefault(String key, Object defaultValue) {
+        Object obj = get(key);
+        if (obj == null) {
+            obj = defaultValue;
+        }
+        return obj;
     }
 
     public Object get(String key) {

@@ -22,38 +22,22 @@
  * SOFTWARE.
  */
 
-package com.flatide.floodgate.agent.flow;
+package com.flatide.floodgate.agent.handler;
 
-public enum FlowTag {
-    ENTRY,
-    DEBUG,
-    SPOOLING,
-    MODULE,
-    RULE,
-    FILTER,
+import com.flatide.floodgate.agent.Context;
 
-    // For Module
-    BEFORE,
-    AFTER,
-    RESULT,
-    CALL,
+public interface FloodgateAbstractHandler {
+    abstract public void handleChannelIn(Context context, Object object);
 
-    CONNECT,
-    TEMPLATE,
-    //OUTPUT,
-    TARGET,
-    BATCHSIZE,
-    FETCHSIZE,
-    ACTION,
-    TIMEOUT,
-    LIMIT,
+    abstract public void handleChannelOut(Context context, Object object);
 
-    // For Action
+    abstract public void handleFlowIn(Context context, Object object);
 
-    CHECK,
-    COUNT,
-    CREATE,
-    READ,
-    UPDATE,
-    DELETE
+    abstract public void handleFlowOut(Context context, Object object);
+
+    abstract public void handleModuleIn(Context context, Object object);
+
+    abstract public void handleModuleOut(Context context, Object object);
+
+    abstract public void handleModuleProgress(Context context, Object object);
 }

@@ -25,24 +25,76 @@
 package com.flatide.floodgate.agent.flow;
 
 import com.flatide.floodgate.agent.Context;
+import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
+import com.flatide.floodgate.agent.handler.HandlerManager;
+import com.flatide.floodgate.agent.handler.HandlerManager.Step;
 import com.flatide.floodgate.agent.flow.module.Module;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 
 import java.util.Map;
+import java.util.UUID;
 
 /*
     하나의 인터페이스를 의미한다
  */
 
 public class Flow {
-    private final FlowContext flowContext;
+    private final Context flowContext;
 
-    public Flow(String id, Map<String, Object> flowInfo, Context agentContext, FGInputStream input) {
-        this.flowContext = new FlowContext(id, flowInfo);
+    private final String flowId;
+    private final String targetId;
+
+    private FlowContext flowContext;
+
+    private String result;
+    private String msg;
+
+    public String getFlowId() {
+        return flowId;
+    }
+
+    public String getTargetId() {
+        return targetId;
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public void setResult(String result) {
+        this.result = result;
+    }
+
+    public String getMsg() {
+        return msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public Flow(String targetId, Context context) {
+        UUID id = UUID.randomUUID();
+
+        this.flowId = id.toString();
+        this.targetId = targetId;
+
+        this.context = context;
+    }
+
+    public Flow(String flowId, String targetId, Context context) {
+        this.flowId = flowId;
+        this.targetId = targetId;
+
+        this.context = context;
+    }
+    
+    public void prepare(Map<String, Object> flowInfo, FGInputStream input) {
+        this.flowContext = new FlowContext(this.flowId, flowInfo);
         this.flowContext.setCurrent(input);
 
-        String method = agentContext.getString(Context.CONTEXT_KEY.HTTP_REQUEST_METHOD);
+        String method = context.getString(Context.CONTEXT_KEY.HTTP_REQUEST_METHOD);
         Object entryMap = flowInfo.get(FlowTag.ENTRY.name());
         if( entryMap instanceof Map) {
             entryMap = (String)((Map<String, String>)entryMap).get(method);
@@ -50,14 +102,17 @@ public class Flow {
         this.flowContext.setEntry((String) entryMap);
 
         this.flowContext.setDebug((Boolean) flowInfo.get(FlowTag.DEBUG.name()));
-        this.flowContext.add("CONTEXT", agentContext);
+        this.flowContext.add(CONTEXT_KEY.CHANNEL_CONTEXT, context);
+        context.add(CONTEXT_KEY.FLOW_CONTEXT, this.flowContext);
 
         // Module
         @SuppressWarnings("unchecked")
         Map<String, Map<String, Object>> mods = (Map<String, Map<String, Object>>) flowInfo.get(FlowTag.MODULE.name());
-        for( Map.Entry<String, Map<String, Object>> entry : mods.entrySet() ) {
-            Module module = new Module( this, entry.getKey(), entry.getValue());
-            this.flowContext.getModules().put( entry.getKey(), module);
+        if (mods != null ) {
+            for( Map.Entry<String, Map<String, Object>> entry : mods.entrySet() ) {
+                Module module = new Module( this, entry.getKey(), entry.getValue());
+                this.flowContext.getModules().put( entry.getKey(), module);
+            }
         }
 
         // Connect Info
@@ -91,17 +146,26 @@ public class Flow {
         while( this.flowContext.hasNext()  ) {
             Module module = this.flowContext.next();
 
-            try {
+            if (!(this instanceof FlowMockup)) {
+                HandleManager.shared().handle(Step.MODULE_IN, this.context, module);
+            }
 
+            try {
                 module.processBefore(flowContext);
                 module.process(flowContext);
                 module.processAfter(flowContext);
 
-                //TODO
-
+                module.setResult("success");
+                module.setMsg("");
             } catch(Exception e) {
                 e.printStackTrace();
+                module.setResult("fail");
+                module.setMsg(e.getMessage());
                 throw e;
+            } finally {
+                if (!(this instanceof FlowMockup)) {
+                    HandlerManager.shared().handle(Step.MODULE_OUT, context, module);
+                }
             }
         }
 

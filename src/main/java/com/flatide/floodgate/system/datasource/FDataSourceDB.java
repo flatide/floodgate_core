@@ -292,7 +292,7 @@ public class FDataSourceDB extends FDataSourceDefault {
             query.append( " = ?");
             i++;
         }
-        query.append(" WHERE ID = ? ");
+        query.append(" WHERE " + keyColumn + " = ? ");
 
         logger.debug(query.toString());
         int count = jdbcTemplate.update(new PreparedStatementCreator() {
