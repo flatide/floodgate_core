@@ -106,7 +106,7 @@ public class Module {
     }
 
     public Flow getFlow() {
-        return this.flow;
+        return flow;
     }
 
     /*

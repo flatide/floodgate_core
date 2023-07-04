@@ -43,10 +43,10 @@ public class Floodgate {
         MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_DATASOURCE));
         MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_TEMPLATE));
 
-       FileLogHandler fileHandler = new FileLogHandler();
-       HandlerManager.shared().addHandler("Default File Log Handler", fileHandler);
+        FileLogHandler fileHandler = new FileLogHandler();
+        HandlerManager.shared().addHandler("Default File Log Handler", fileHandler);
 
-       DBLogHandler dbHandler = new DBLogHandler();
-       HandlerManager.shared().addHandler("Default DB Log Handler", dbHandler);
+        DBLogHandler dbHandler = new DBLogHandler();
+        HandlerManager.shared().addHandler("Default DB Log Handler", dbHandler);
    }
 }

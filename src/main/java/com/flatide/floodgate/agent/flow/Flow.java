@@ -108,7 +108,7 @@ public class Flow {
         // Module
         @SuppressWarnings("unchecked")
         Map<String, Map<String, Object>> mods = (Map<String, Map<String, Object>>) flowInfo.get(FlowTag.MODULE.name());
-        if (mods != null ) {
+        if (mods != null) {
             for( Map.Entry<String, Map<String, Object>> entry : mods.entrySet() ) {
                 Module module = new Module( this, entry.getKey(), entry.getValue());
                 this.flowContext.getModules().put( entry.getKey(), module);
