@@ -106,7 +106,7 @@ public class Flow {
 
         this.context.setDebug((Boolean) flowInfo.get(FlowTag.DEBUG.name()));
         this.context.add(CONTEXT_KEY.CHANNEL_CONTEXT, channelContext);
-        context.add(CONTEXT_KEY.FLOW_CONTEXT, this.context);
+        channelContext.add(CONTEXT_KEY.FLOW_CONTEXT, this.context);
 
         // Module
         @SuppressWarnings("unchecked")

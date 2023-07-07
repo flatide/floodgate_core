@@ -237,6 +237,7 @@ public class Module {
                         break;
                     }
                     case CREATE:
+                    {
                         String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                         MappingRule rule = flowContext.getRules().get(ruleName);
 
@@ -245,10 +246,13 @@ public class Module {
 
                         connector.beforeCreate(rule);
                         break;
+                    }
                     case DELETE:
+                    {
                         connector.delete();
                         setResult("success");
                         break;
+                    }
                     default:
                         break;
                 }
@@ -289,7 +293,7 @@ public class Module {
                     }
                     return null;
                 default:
-                return null;
+                    return null;
             }
         } catch (Exception e) {
             connector.rollback();

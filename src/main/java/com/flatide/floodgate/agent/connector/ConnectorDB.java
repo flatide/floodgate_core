@@ -258,7 +258,7 @@ public class ConnectorDB extends ConnectorBase {
             List<Map<String, Object>> temp = new ArrayList<>();
             Map<String, Object> one = itemList.get(0);
             Map<String, Object> copy = new HashMap<>();
-            for (Map.Entry<String, Object> e: one.entrySet()) {
+            for (Map.Entry<String, Object> e : one.entrySet()) {
                 copy.put(e.getKey(), "?");
             }
             temp.add(copy);
@@ -436,7 +436,7 @@ public class ConnectorDB extends ConnectorBase {
                 break;
             }
         }
-        if ( c>0 ) {
+        if ( c > 0 ) {
             this.retrieve += c;
             this.module.setProgress(retrieve);
             HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
@@ -481,7 +481,7 @@ public class ConnectorDB extends ConnectorBase {
                 HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
         }
-        if ( c>0 ) {
+        if ( c > 0 ) {
             retrieve += c;
             this.module.setProgress(retrieve);
             HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
