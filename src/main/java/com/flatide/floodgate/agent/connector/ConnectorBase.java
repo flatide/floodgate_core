@@ -52,7 +52,7 @@ public abstract class ConnectorBase implements Connector {
     @Override
     //public final long createForStream(Payload payload, MappingRule mappingRule) throws Exception {
     public final long create(Payload payload, MappingRule mappingRule) throws Exception {
-        beforeCreate(mappingRule);
+        //beforeCreate(mappingRule);
 
         long sent = 0;
         List<Map<String, Object>> itemList = new LinkedList<>();

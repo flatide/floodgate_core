@@ -52,7 +52,7 @@ public class FlowMockup extends Flow {
         }
 
         this.context.setNext(entry);
-        while (this.context.hasNexts()) {
+        while (this.context.hasNext()) {
             Module module = this.context.next();
 
             try {

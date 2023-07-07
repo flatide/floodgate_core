@@ -49,7 +49,7 @@ public class JSONContainer implements Carrier {
         this.headerTag = headerTag;
         this.dataTag = dataTag;
         this.buffer = (List<Object>) data.get(dataTag);
-        if (this.buffer !=- null) {
+        if (this.buffer != null) {
             this.bufferSize = this.buffer.size();
         } else {
             this.bufferSize = 0;

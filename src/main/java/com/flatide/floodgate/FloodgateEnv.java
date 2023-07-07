@@ -4,20 +4,20 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Enumeration;
 
-public class CAEnv {
+public class FloodgateEnv {
     String address = "";
     String addressLast = "";
     String port = "";
 
-    private CAEnv() {
+    private FloodgateEnv() {
     }
 
-    public static CAEnv getInstance() {
+    public static FloodgateEnv getInstance() {
         return LazyHolder.instance;
     }
 
     private static class LazyHolder {
-        private static final CAEnv instance = new CAEnv();
+        private static final FloodgateEnv instance = new FloodgateEnv();
     }
 
     public String getAddress() {

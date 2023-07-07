@@ -37,7 +37,7 @@ import java.util.UUID;
 
 public class Flow {
     private final Context channelContext;
-    protected FlowwContext context;
+    protected FlowContext context;
 
     private final String flowId;
     private final String targetId;
@@ -106,7 +106,7 @@ public class Flow {
 
         this.context.setDebug((Boolean) flowInfo.get(FlowTag.DEBUG.name()));
         this.context.add(CONTEXT_KEY.CHANNEL_CONTEXT, channelContext);
-        context.add(CONTEXT_KEY.FLOW_CONTEXT, this.flowContext);
+        context.add(CONTEXT_KEY.FLOW_CONTEXT, this.context);
 
         // Module
         @SuppressWarnings("unchecked")
@@ -163,7 +163,7 @@ public class Flow {
                         throw new Exception("Cannot find target module to pipe with.");
                     }
 
-                    booelan complete = false;
+                    boolean complete = false;
 
                     while (!complete) {
                         List part = module.processPartially(this, context, null);

@@ -33,8 +33,8 @@ import com.flatide.floodgate.agent.template.DocumentTemplate;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 import com.flatide.floodgate.agent.flow.FlowTag;
 import com.flatide.floodgate.agent.flow.module.Module;
-import com.flatide.floodgate.agent.flow.module.Module.ModuleContext;
-import com.flatide.floodgate.agent.flow.module.Module.ModuleContext.MODULE_CONTEXT;
+import com.flatide.floodgate.agent.flow.module.ModuleContext;
+import com.flatide.floodgate.agent.flow.module.ModuleContext.MODULE_CONTEXT;
 import com.flatide.floodgate.agent.flow.rule.FunctionProcessor;
 import com.flatide.floodgate.system.FlowEnv;
 import com.flatide.floodgate.system.security.FloodgateSecurity;
@@ -148,9 +148,9 @@ public class ConnectorDB extends ConnectorBase {
         this.module = module;
 
         Map connectInfo = (Map) module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
-        String url = PropertyMap.getString(connectInfo, COnnectorTag.URL);
-        String user = PropertyMap.getString(connectInfo, COnnectorTag.USER);
-        String password = PropertyMap.getString(connectInfo, COnnectorTag.PASSWORD);
+        String url = PropertyMap.getString(connectInfo, ConnectorTag.URL);
+        String user = PropertyMap.getString(connectInfo, ConnectorTag.USER);
+        String password = PropertyMap.getString(connectInfo, ConnectorTag.PASSWORD);
 
         channelContext = (Context) this.module.getFlowContext().get(CONTEXT_KEY.CHANNEL_CONTEXT);
         moduleContext = module.getContext();
@@ -168,7 +168,7 @@ public class ConnectorDB extends ConnectorBase {
             this.connection = dataSource.getConnection();
         } else*/ {
             password = FloodgateSecurity.shared().decrypt(password);
-            connection = DriverManager.getConnection(url, user, password);
+            this.connection = DriverManager.getConnection(url, user, password);
         }
 
         this.connection.setAutoCommit(false);
@@ -201,7 +201,7 @@ public class ConnectorDB extends ConnectorBase {
             this.query = documentTemplate.makeHeader(moduleContext, mappingRule, temp);
             this.param = mappingRule.getParam();
             logger.debug(this.query);
-            ps = this.connection.preparedStatement(this.query);
+            ps = this.connection.prepareStatement(this.query);
         }
 
         try {
@@ -227,7 +227,7 @@ public class ConnectorDB extends ConnectorBase {
                         ps.setQueryTimeout(timeout);
                         cur = System.currentTimeMillis();
                         ps.executeBatch();
-                        this.setn += batchCount;
+                        this.sent += batchCount;
                         batchCount = 0;
 
                         this.module.setProgress(this.sent);
@@ -246,6 +246,8 @@ public class ConnectorDB extends ConnectorBase {
             e.printStackTrace();
             throw e;
         }
+
+        return sent;
     }
 
     @Override
@@ -270,7 +272,7 @@ public class ConnectorDB extends ConnectorBase {
         try {
             int count = 0;
             int timeout = PropertyMap.getIntegerDefault(module.getSequences(), FlowTag.TIMEOUT, 0);
-            for (Map teim : itemList) {
+            for (Map item : itemList) {
                 int i = 1;
                 for (String key : this.param) {
                     if (key.startsWith(">")) {
@@ -412,7 +414,7 @@ public class ConnectorDB extends ConnectorBase {
             if (!this.flush) {
                 Map<String, Object> column = new LinkedHashMap<>();
                 for (int i = 1; i <= count; i++) {
-                    Object row = rs.getObject(i);
+                    Object row = this.resultSet.getObject(i);
 
                     if (row instanceof oracle.sql.TIMESTAMP) {
                         // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
@@ -430,14 +432,14 @@ public class ConnectorDB extends ConnectorBase {
                 this.retrieve += c;
                 c = 0;
                 this.module.setProgress(retrieve);
-                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
                 break;
             }
         }
         if ( c>0 ) {
             this.retrieve += c;
             this.module.setProgress(retrieve);
-            HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+            HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
         }
 
         return result;
@@ -450,15 +452,15 @@ public class ConnectorDB extends ConnectorBase {
     @Override
     public List<Map> read(MappingRule rule) throws Exception {
         List<Map> result = new ArrayList<>();
-        ResultSetMetaData rsmeta = rs.getMetaData();
+        ResultSetMetaData rsmeta = this.resultSet.getMetaData();
 
         int count = rsmeta.getColumnCount();
         int c = 0;
         while (this.resultSet.next()) {
-            if (!flush) {
+            if (!this.flush) {
                 Map<String, Object> column = new LinkedHashMap<>();
                 for (int i = 1; i <= count; i++) {
-                    Object row = rs.getObject(i);
+                    Object row = this.resultSet.getObject(i);
 
                     if (row instanceof oracle.sql.TIMESTAMP) {
                         // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
@@ -504,8 +506,8 @@ public class ConnectorDB extends ConnectorBase {
     @Override
     public void count() throws Exception {
         String table = PropertyMap.getString(this.module.getSequences(), FlowTag.TARGET);
-        String table = PropertyMap.getString(this.module.getSequences(), FlowTag.SQL);
-        String table = PropertyMap.getString(this.module.getSequences(), FlowTag.CONDITION);
+        String sql = PropertyMap.getString(this.module.getSequences(), FlowTag.SQL);
+        String condition = PropertyMap.getString(this.module.getSequences(), FlowTag.CONDITION);
 
         String query = "";
 
@@ -604,7 +606,7 @@ public class ConnectorDB extends ConnectorBase {
     @Override
     public void close() throws Exception {
         try { if (this.connection != null) this.connection.close(); } finally { this.connection = null; }
-        try { if (this.ps != null) this.ps.close(); } finally { this.ps= null; }
+        try { if (this.ps != null) this.ps.close(); } finally { this.ps = null; }
         try { if (this.resultSet != null) this.resultSet.close(); } finally { this.resultSet = null; }
     }
 

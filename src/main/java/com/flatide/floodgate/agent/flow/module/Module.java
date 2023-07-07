@@ -27,8 +27,8 @@ package com.flatide.floodgate.agent.flow.module;
 import com.flatide.floodgate.ConfigurationManager;
 import com.flatide.floodgate.FloodgateConstants;
 import com.flatide.floodgate.agent.template.DocumentTemplate;
-import com.flatide.floodgate.agent.connector.ConnectorTag;
 import com.flatide.floodgate.system.utils.PropertyMap;
+import com.flatide.floodgate.agent.connector.ConnectorTag;
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.connector.Connector;
@@ -261,19 +261,19 @@ public class Module {
         }
     }
 
-    public void processPartially(Flow flow, FlowContext flowContext, List buffer) throws Exception {
+    public List processPartially(Flow flow, FlowContext flowContext, List buffer) throws Exception {
         try {
             String action = (String) this.sequences.get(FlowTag.ACTION.name());
 
             switch (FlowTag.valueOf(action)) {
                 case READ:
                 {
-                    String ruleName = (String) this.sequences(FlowTag.RULE.name());
+                    String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                     MappingRule rule = flowContext.getRules().get(ruleName);
 
                     List part = connector.readPartially(rule);
                     if (part.isEmpty()) {
-                        setReresult("success");
+                        setResult("success");
                         return null;
                     }
                     return part;
@@ -292,7 +292,7 @@ public class Module {
                 return null;
             }
         } catch (Exception e) {
-            connetor.rollback();
+            connector.rollback();
             setResult("fail");
             setMsg(e.getMessage());
             e.printStackTrace();
@@ -300,14 +300,14 @@ public class Module {
         }
     }
 
-    public void process(Flow foow, FlowContext flowContext) throws Exception {
+    public void process(Flow flow, FlowContext flowContext) throws Exception {
         try {
-            String action = (String) this.sequences(FlowTag.ACTION.name());
+            String action = (String) this.sequences.get(FlowTag.ACTION.name());
 
             switch (FlowTag.valueOf(action)) {
                 case READ:
                 {
-                    String ruleName = (String) this.sequences(FlowTag.RULE.name());
+                    String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                     MappingRule rule = flowContext.getRules().get(ruleName);
 
                     resultList = connector.read(rule);
@@ -326,7 +326,7 @@ public class Module {
                     String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                     MappingRule rule = flowContext.getRules().get(ruleName);
 
-                    String dbType = (Strin) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
+                    String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
                     rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
 
                     Payload payload = null;
@@ -361,7 +361,7 @@ public class Module {
                             }
                         }
 
-                        if (itemList.size > 0) {
+                        if (itemList.size() > 0) {
                             connector.create(itemList, rule);
                             sent += itemList.size();
                             itemList.clear();
@@ -373,6 +373,8 @@ public class Module {
                         connector.rollback();
                         throw e;
                     }
+                    break;
+                default:
                     break;
             }
 
@@ -386,7 +388,7 @@ public class Module {
         }
     }
 
-    public void processAfter(FlowContext context) {
+    public void processAfter(Flow flow, FlowContext context) throws Exception {
         try {
             String action = (String) this.sequences.get(FlowTag.ACTION.name());
 
@@ -404,9 +406,9 @@ public class Module {
                     MappingRule rule = flowContext.getRules().get(ruleName);
 
                     String after = PropertyMap.getStringDefault(this.sequences, "AFTER", "COMMIT");
-                    if ("COMMIT".equals(afetr)) {
+                    if ("COMMIT".equals(after)) {
                         connector.commit();
-                    } else if ("ROLLBACK".euqals(after)) {
+                    } else if ("ROLLBACK".equals(after)) {
                         connector.rollback();
                     }
                     connector.afterCreate(rule);
@@ -421,7 +423,7 @@ public class Module {
             String next = (String) this.sequences.get(FlowTag.CALL.name());
             flowContext.setNext(next);
         } catch (Exception e) {
-            setREsult("fail");
+            setResult("fail");
             setMsg(e.getMessage());
             e.printStackTrace();
             throw e;

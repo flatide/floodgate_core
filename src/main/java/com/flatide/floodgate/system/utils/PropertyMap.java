@@ -91,11 +91,11 @@ public class PropertyMap {
         return null;
     }
 
-    public String getStringDefault(Map map, Enum key, String defaultValue) {
+    static public String getStringDefault(Map map, Enum key, String defaultValue) {
         return getStringDefault(map, key.name(), defaultValue);
     }
 
-    public String getStringDefault(Map map, String key, String defaultValue) {
+    static public String getStringDefault(Map map, String key, String defaultValue) {
         String ret = getString(map, key);
         if( ret == null ) {
             ret = defaultValue;
@@ -103,11 +103,11 @@ public class PropertyMap {
         return ret;
     }
 
-    public Integer getInteger(Map map, Enum key) {
+    static public Integer getInteger(Map map, Enum key) {
         return getInteger(map, key.name());
     }
 
-    public Integer getInteger(Map map, String key) {
+    static public Integer getInteger(Map map, String key) {
         Object value = get(map, key);
         if( value instanceof Integer) {
             return (Integer) value;
@@ -118,11 +118,11 @@ public class PropertyMap {
         return null;
     }
 
-    public Integer getIntegerDefault(Map map, Enum key, Integer defaultValue) {
+    static public Integer getIntegerDefault(Map map, Enum key, Integer defaultValue) {
         return getIntegerDefault(map, key.name(), defaultValue);
     }
 
-    public Integer getIntegerDefault(Map map, String key, Integer defaultValue) {
+    static public Integer getIntegerDefault(Map map, String key, Integer defaultValue) {
         Integer ret = getInteger(map, key);
         if( ret == null ) {
             ret = defaultValue;
@@ -135,7 +135,7 @@ public class PropertyMap {
         {SEQUENCE.OUTPUT} 형태를 처리한다.
         {SEQUENCE.{INOUT}} 등의 중첩은 처리하지 못한다
      */
-    public String evaluate(Map map, String str) {
+    static public String evaluate(Map map, String str) {
         Pattern pattern = Pattern.compile("\\{[^\\s{}]+\\}");
         Matcher matcher = pattern.matcher(str);
 
@@ -149,7 +149,6 @@ public class PropertyMap {
             if( value != null ) {
                 str = str.replace(find, value);
             } else {
-                logger.error(find + " is wrong expression.");
             }
         }
 

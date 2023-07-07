@@ -82,7 +82,7 @@ public class ConnectorFile extends ConnectorBase {
     public void connect(Context context, Module module) throws Exception {
         this.module = module;
 
-        Map connectiInfo = (Map) module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
+        Map connectInfo = (Map) module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
         String url = PropertyMap.getString(connectInfo, ConnectorTag.URL);
 
         String target = (String) module.getSequences().get(FlowTag.TARGET);
@@ -99,8 +99,8 @@ public class ConnectorFile extends ConnectorBase {
 
     @Override
     public int create(List<Map> itemList, MappingRule mappingRule) throws Exception {
-        ModuleContext contexts = this.module.getContext();
-        String body = getDocumentTempalte().makeBody(context, mappingRule, itemList, sent);
+        ModuleContext context = this.module.getContext();
+        String body = getDocumentTemplate().makeBody(context, mappingRule, itemList, sent);
 
         this.outputStream.write(body.getBytes());
 
@@ -113,7 +113,6 @@ public class ConnectorFile extends ConnectorBase {
         return 0;
     }
 
-    @Override
     public int creatingBinary(byte[] item, long size, long sent) throws Exception {
         this.outputStream.write(item, 0, (int) size);
         this.sent += size;
