@@ -37,26 +37,70 @@ public class FileLogHandler implements FloodgateAbstractHandler {
 
     @Override
     public void handleChannelIn(Context context, Object object) {
+        long cur = System.currentTimeMillis();
+        context.add(CONTEXT_KEY.CHANNEL_START_TIME, cur);
+
+        String id = context.getString(CONTEXT_KEY.CHANNEL_ID);
+        String api = context.getString(CONTEXT_KEY.API);
+
+        logger.info(String.format("Channel %s (%s) is started.", id, api));
     }
 
     @Override
     public void handleChannelOut(Context context, Object object) {
+        long cur = System.currentTimeMillis();
+        long start = (long) context.getDefault(CONTEXT_KEY.CHANNEL_START_TIME, Long.valueOf(0));
+
+        String id = context.getString(CONTEXT_KEY.CHANNEL_ID);
+
+        logger.info(String.format("Channel %s is done : %s ms elapsed.", id, cur - start));
     }
 
     @Override
     public void handleFlowIn(Context context, Object object) {
+        long cur = System.currentTimeMillis();
+        context.add(CONTEXT_KEY.FLOW_START_TIME, cur);
+
+        Flow flow = (Flow) object;
+        String id = flow.getFlowId();
+        String parentId = context.getString(CONTEXT_KEY.CHANNEL_ID);
+        String target = flow.getTargetId();
+
+        logger.info(String.format("Flow %s of %s (%s) is started.", id, parentId, target));
     }
 
     @Override
     public void handleFlowOut(Context context, Object object) {
+        long cur = System.currentTimeMillis();
+        long start = (long) context.getDefault(CONTEXT_KEY.FLOW_START_TIME, Long.valueOf(0));
+
+        Flow flow = (Flow) object;
+        String id = flow.getFlowId();
+
+        logger.info(String.format("Flow %s is done : %s ms elapsed.", id, cur - start));
     }
 
     @Override
     public void handleModuleIn(Context context, Object object) {
+        long cur = System.currentTimeMillis();
+        context.add(CONTEXT_KEY.MODULE_START_TIME, cur);
+
+        Module module = (Module) object;
+        String id = module.getId();
+        String parentId = module.getFlow().getFlowId();
+
+        logger.info(String.format("Module %s of %s (%s) is started.", id, parentId, module.getName()));
     }
 
     @Override
     public void handleModuleOut(Context context, Object object) {
+        long cur = System.currentTimeMillis();
+        long start = (long) context.getDefault(CONTEXT_KEY.MODULE_START_TIME, Long.valueOf(0));
+
+        Module module = (Module) object;
+        String id = module.getId();
+
+        logger.info(String.format("Module %s is done : %s ms elapsed.", id, cur - start));
     }
 
     @Override
