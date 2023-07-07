@@ -22,100 +22,49 @@
  * SOFTWARE.
  */
 
-package com.flatide.floodgate.agent;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+package com.flatide.floodgate.system.utils;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class Context {
-    private static final Logger logger = LogManager.getLogger(Context.class);
+import com.flatide.floodgate.agent.Context;
 
-    public enum CONTEXT_KEY {
-        API,
-        CHANNEL_ID,
-        
-        REQUEST_PATH_VARIABLES,
-        REQUEST_PARAMS,
-        REQUEST_BODY,
-        HTTP_REQUEST_METHOD,
-
-        FLOW,
-
-        CHANNEL_CONTEXT,
-        FLOW_CONTEXT,
-
-        CHANNEL_START_TIME,
-        CHANNEL_ELAPSED,
-        FLOW_START_TIME,
-        MODULE_START_TIME,
-
-        LATEST_RESULT,
-        LATEST_MSG,
+public class PropertyMap {
+    static public Object get(Map map, Enum key) {
+        return get(map, key.name());
     }
 
-    Map<String, Object> map = new HashMap<>();
-
-    public Map<String, Object> getMap() {
-        return this.map;
+    static public Object getDefault(Map map, Enum key, Object defaultValue) {
+        return getDefault(map, key.name(), defaultValue);
     }
 
-    public void setMap(final Map<String, Object> map) {
-        this.map = map;
-    }
-
-    public String toString() {
-        return this.map.toString();
-    }
-
-    public void add(String key, Object value) {
-        this.map.put(key, value);
-    }
-
-    public void add(Enum key, Object value) {
-        add(key.name(), value);
-    }
-
-    public Object get(Enum key) {
-        return get(key.name());
-    }
-
-    public Object getDefault(Enum key, Object defaultValue) {
-        return getDefault(key.name(), defaultValue);
-    }
-
-    public Object getDefault(String key, Object defaultValue) {
-        Object obj = get(key);
+    static public Object getDefault(Map map, String key, Object defaultValue) {
+        Object obj = get(map, key);
         if (obj == null) {
             obj = defaultValue;
         }
         return obj;
     }
 
-    public Object get(String key) {
-        // . 구분자를 포함한 상태의 키가 있는지 먼저 검사
-        Object value = this.map.get(key);
-        if( value == null || key.contains(".")) {
-            // . 구분자로 구성된 경우 자식 context 검색
+    static public Object get(Map map, String key) {
+        Object value = map.get(key);
+        if (value == null || key.contains(".")) {
             String[] keys = key.split("\\.");
-            Map<String, Object> current = this.map;
-            for(String k : keys) {
+            Map<String, Object> current = map;
+            for (String k : keys) {
                 Object child = current.get(k);
-                if( child != null ) {
-                    if( key.contains(".")) {
+                if (child != null) {
+                    if (key.contains(".")) {
                         key = key.substring(key.indexOf(".") + 1);
                     } else {
                         return child;
                     }
-                    if( child instanceof Context) {
+                    if (child instanceof Context) {
                         return ((Context) child).get(key);
-                    } else if( child instanceof Map) {
+                    } else if (child instanceof Map) {
                         current = (Map<String, Object>) child;
                     }
                 } else {
@@ -126,41 +75,40 @@ public class Context {
         return value;
     }
 
-    public String getString(Enum key) {
-        return getString(key.name());
+    static public String getString(Map map, Enum key) {
+        return getString(map, key.name());
     }
 
-    public String getString(String key) {
-        Object value = get(key);
-        if( value != null ) {
+    static public String getString(Map map, String key) {
+        Object value = get(map, key);
+        if (value != null) {
             if( value instanceof String) {
                 return (String) value;
             } else {
                 return value.toString();
             }
         }
-
         return null;
     }
 
-    public String getStringDefault(Enum key, String defaultValue) {
-        return getStringDefault(key.name(), defaultValue);
+    public String getStringDefault(Map map, Enum key, String defaultValue) {
+        return getStringDefault(map, key.name(), defaultValue);
     }
 
-    public String getStringDefault(String key, String defaultValue) {
-        String ret = getString(key);
+    public String getStringDefault(Map map, String key, String defaultValue) {
+        String ret = getString(map, key);
         if( ret == null ) {
             ret = defaultValue;
         }
         return ret;
     }
 
-    public Integer getInteger(Enum key) {
-        return getInteger(key.name());
+    public Integer getInteger(Map map, Enum key) {
+        return getInteger(map, key.name());
     }
 
-    public Integer getInteger(String key) {
-        Object value = get(key);
+    public Integer getInteger(Map map, String key) {
+        Object value = get(map, key);
         if( value instanceof Integer) {
             return (Integer) value;
         } else if (value instanceof String) {
@@ -170,12 +118,12 @@ public class Context {
         return null;
     }
 
-    public Integer getIntegerDefault(Enum key, Integer defaultValue) {
-        return getIntegerDefault(key.name(), defaultValue);
+    public Integer getIntegerDefault(Map map, Enum key, Integer defaultValue) {
+        return getIntegerDefault(map, key.name(), defaultValue);
     }
 
-    public Integer getIntegerDefault(String key, Integer defaultValue) {
-        Integer ret = getInteger(key);
+    public Integer getIntegerDefault(Map map, String key, Integer defaultValue) {
+        Integer ret = getInteger(map, key);
         if( ret == null ) {
             ret = defaultValue;
         }
@@ -187,7 +135,7 @@ public class Context {
         {SEQUENCE.OUTPUT} 형태를 처리한다.
         {SEQUENCE.{INOUT}} 등의 중첩은 처리하지 못한다
      */
-    public String evaluate(String str) {
+    public String evaluate(Map map, String str) {
         Pattern pattern = Pattern.compile("\\{[^\\s{}]+\\}");
         Matcher matcher = pattern.matcher(str);
 
@@ -197,7 +145,7 @@ public class Context {
         }
 
         for( String find : findGroup) {
-            String value = getString(find.substring(1, find.length() - 1));
+            String value = getString(map, find.substring(1, find.length() - 1));
             if( value != null ) {
                 str = str.replace(find, value);
             } else {

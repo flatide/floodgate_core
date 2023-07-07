@@ -25,15 +25,20 @@
 package com.flatide.floodgate.agent.connector;
 
 import com.flatide.floodgate.agent.Context;
+import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.flow.rule.MappingRuleItem;
 import com.flatide.floodgate.agent.handler.HandlerManager;
 import com.flatide.floodgate.agent.handler.HandlerManager.Step;
 import com.flatide.floodgate.agent.template.DocumentTemplate;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
+import com.flatide.floodgate.agent.flow.FlowTag;
 import com.flatide.floodgate.agent.flow.module.Module;
+import com.flatide.floodgate.agent.flow.module.Module.ModuleContext;
+import com.flatide.floodgate.agent.flow.module.Module.ModuleContext.MODULE_CONTEXT;
 import com.flatide.floodgate.agent.flow.rule.FunctionProcessor;
 import com.flatide.floodgate.system.FlowEnv;
 import com.flatide.floodgate.system.security.FloodgateSecurity;
+import com.flatide.floodgate.system.utils.PropertyMap;
 
 //import com.zaxxer.hikari.HikariConfig;
 //import com.zaxxer.hikari.HikariDataSource;
@@ -54,9 +59,24 @@ public class ConnectorDB extends ConnectorBase {
 
     private static final ConcurrentHashMap<String, DataSource> pools = new ConcurrentHashMap<>();
 
-    private Connection connection = null;
+    Context channelContext = null;
+    ModuleContext moduleContext = null;
 
+    Module module = null;
+
+    private Connection connection = null;
+    private Integer fetchSize = 0;
+    private Integer sizeForUpdateHandler = 0;
+    private Boolean flush = false;
+    private int retrieve = 0;
+
+    private Integer batchSize = 0;
     private String query = "";
+    private PreparedStatement ps = null;
+    private ResultSet resultSet = null;
+
+    private Integer batchCount = 0;
+
     private List<String> param;
 
     private int sent = 0;
@@ -125,7 +145,15 @@ public class ConnectorDB extends ConnectorBase {
     public void connect(Context context, Module module) throws Exception {
         cur = System.currentTimeMillis();
 
-        super.connect(context, module);
+        this.module = module;
+
+        Map connectInfo = (Map) module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
+        String url = PropertyMap.getString(connectInfo, COnnectorTag.URL);
+        String user = PropertyMap.getString(connectInfo, COnnectorTag.USER);
+        String password = PropertyMap.getString(connectInfo, COnnectorTag.PASSWORD);
+
+        channelContext = (Context) this.module.getFlowContext().get(CONTEXT_KEY.CHANNEL_CONTEXT);
+        moduleContext = module.getContext();
 
         /*if( this.name != null && !this.name.isEmpty() ) {
             DataSource dataSource = pools.get(this.name);
@@ -139,8 +167,8 @@ public class ConnectorDB extends ConnectorBase {
             }
             this.connection = dataSource.getConnection();
         } else*/ {
-            this.password = FloodgateSecurity.shared().decrypt(this.password);
-            this.connection = DriverManager.getConnection(this.url, this.user, this.password);
+            password = FloodgateSecurity.shared().decrypt(password);
+            connection = DriverManager.getConnection(url, user, password);
         }
 
         this.connection.setAutoCommit(false);
@@ -149,20 +177,17 @@ public class ConnectorDB extends ConnectorBase {
         logger.debug(meta.getDatabaseProductName() + " : " + meta.getDatabaseProductVersion());
     }
 
-    /*@Override
+    @Override
     public void beforeCreate(MappingRule mappingRule) throws Exception {
-        //DocumentTemplate documentTemplate = getDocumentTemplate();
-
-        //query = documentTemplate.makeHeader(this.output, mappingRule);
-        //query = query + documentTemplate.makeFooter(this.output, mappingRule);
-
-        //super.beforeCreate(mappingRule);
-    }*/
+        this.batchSize = PropertyMap.getIntegerDefault(module.getSequences(), FlowTag.BATCHSIZE, 1);
+    }
 
     @Override
-    public int creating(List<Map<String, Object>> itemList, MappingRule mappingRule, long index, int batchSize) throws Exception {
-        Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
+    public int createPartially(List<Map> itemList, MappingRule mappingRule) throws Exception {
         if( this.query.isEmpty()) {
+            if (itemList == null || itemList.isEmpty()) {
+                return 0;
+            }
             DocumentTemplate documentTemplate = getDocumentTemplate();
 
             List<Map<String, Object>> temp = new ArrayList<>();
@@ -173,24 +198,23 @@ public class ConnectorDB extends ConnectorBase {
             }
             temp.add(copy);
 
-            this.query = documentTemplate.makeHeader(context, mappingRule, temp);
-            //this.query += documentTemplate.makeBody(this.output, mappingRule);
+            this.query = documentTemplate.makeHeader(moduleContext, mappingRule, temp);
             this.param = mappingRule.getParam();
             logger.debug(this.query);
+            ps = this.connection.preparedStatement(this.query);
         }
-        //cur = System.currentTimeMillis();
-        try (PreparedStatement ps = this.connection.prepareStatement(this.query)) {
-            try {
-                int count = 0;
-                int timeout = this.context.getIntegerDefault("SEQUENCE.TIMEOUT", 0);
+
+        try {
+            int timeout = PropertyMap.getIntegerDefault(module.getSequences(), FlowTag.TIMEOUT, 0);
+            if (itemList != null) {
                 for (Map item : itemList) {
                     int i = 1;
                     for (String key : this.param) {
-                        if( key.startsWith(">")) {
+                        if (key.startsWith(">")) {
                             Object value = processEmbedFunction(key.substring(1));
                             ps.setObject(i++, value);
-                        } else if( key.startsWith("{")) {
-                            Object value = context.get(key.substring(1, key.length() - 1 ));
+                        } else if (key.startsWith("{")) {
+                            Object value = moduleContext.get(key.substring(1, key.length() - 1));
                             ps.setObject(i++, value);
                         } else {
                             ps.setObject(i++, item.get(key));
@@ -198,44 +222,97 @@ public class ConnectorDB extends ConnectorBase {
                     }
 
                     ps.addBatch();
-                    count++;
-                    if( count >= batchSize ) {
+                    batchCount++;
+                    if (batchCount >= batchSize) {
                         ps.setQueryTimeout(timeout);
                         cur = System.currentTimeMillis();
                         ps.executeBatch();
-                        //this.connection.commit();
-                        this.sent += count;
-                        count = 0;
+                        this.setn += batchCount;
+                        batchCount = 0;
 
                         this.module.setProgress(this.sent);
                         HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
-                        logger.debug(System.currentTimeMillis() - this.cur);
                     }
-
-                    /*ps.executeUpdate();
-                    this.connection.commit();
-                    this.sent++;
-                    System.out.println(System.currentTimeMillis() - this.cur);
-                     */
                 }
-                if( count > 0 ) {
+            }
+            if (itemList == null && batchCount > 0) {
+                ps.setQueryTimeout(timeout);
+                ps.executeBatch();
+                this.sent += batchCount;
+                this.module.setProgress(this.sent);
+                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    @Override
+    public int create(List<Map> itemList, MappingRule mappingRule) throws Exception {
+        if (this.query.isEmpty()) {
+            DocumentTemplate documentTemplate = getDocumentTemplate();
+
+            List<Map<String, Object>> temp = new ArrayList<>();
+            Map<String, Object> one = itemList.get(0);
+            Map<String, Object> copy = new HashMap<>();
+            for (Map.Entry<String, Object> e: one.entrySet()) {
+                copy.put(e.getKey(), "?");
+            }
+            temp.add(copy);
+
+            this.query = documentTemplate.makeHeader(moduleContext, mappingRule, temp);
+            this.param = mappingRule.getParam();
+            logger.debug(this.query);
+            ps = this.connection.prepareStatement(this.query);
+        }
+
+        try {
+            int count = 0;
+            int timeout = PropertyMap.getIntegerDefault(module.getSequences(), FlowTag.TIMEOUT, 0);
+            for (Map teim : itemList) {
+                int i = 1;
+                for (String key : this.param) {
+                    if (key.startsWith(">")) {
+                        Object value = processEmbedFunction(key.substring(1));
+                        ps.setObject(i++, value);
+                    } else if (key.startsWith("{")) {
+                        Object value = moduleContext.get(key.substring(1, key.length() - 1));
+                        ps.setObject(i++, value);
+                    } else {
+                        ps.setObject(i++, item.get(key));
+                    }
+                }
+
+                ps.addBatch();
+                count++;
+                if (count >= batchSize) {
                     ps.setQueryTimeout(timeout);
-                    cur = System.currentTimeMillis();
                     ps.executeBatch();
-                    //this.connection.commit();
                     this.sent += count;
+                    count = 0;
+
                     this.module.setProgress(this.sent);
                     HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
-                    logger.debug(System.currentTimeMillis() - this.cur);
                 }
-                //this.connection.commit();
-            } catch (Exception e) {
-                e.printStackTrace();
-                throw e;
             }
+            if (count > 0) {
+                ps.setQueryTimeout(timeout);
+                ps.executeBatch();
+                this.sent += count;
+                this.module.setProgress(this.sent);
+                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
         }
 
         return sent;
+    }
+
+    @Override
+    public void afterCreate(MappingRule rule) throws Exception {
     }
 
     @Override
@@ -247,18 +324,15 @@ public class ConnectorDB extends ConnectorBase {
     public void rollback() throws SQLException {
         this.sent = 0;
         this.connection.rollback();
-        Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
         this.module.setProgress(0);
         HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
     }
 
     @Override
-    public List<Map> read(MappingRule rule) throws Exception {
-        Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
-
-        String table = (String) this.context.get("SEQUENCE.TARGET");
-        String sql = (String) this.context.get("SEQUENCE.SQL");
-        String condition = (String) this.context.getString("SEQUENCE.CONDITION");
+    public void beforeRead(MappingRule rule) throws Exception {
+        String table = PropertyMap.getString(this.module.getSequences(), FlowTag.TARGET);
+        String sql = PropertyMap.getString(this.module.getSequences(), FlowTag.SQL);
+        String condition = PropertyMap.getString(this.module.getSequences(), FlowTag.CONDITION);
 
         String query = "";
 
@@ -299,7 +373,7 @@ public class ConnectorDB extends ConnectorBase {
 
             int i = 0;
             for (String source : sourceSet) {
-                if( i > 0 ) {
+                if (i > 0) {
                     query += ", ";
                 }
                 query += source;
@@ -313,52 +387,102 @@ public class ConnectorDB extends ConnectorBase {
             logger.debug(query);
         }
 
-        Integer fetchSize = this.context.getIntegerDefault("SEQUENCE.FETCHSIZE", 0);
-        Integer sizeForUpdateHandler = fetchSize < 1000 ? 3000 : fetchSize * 3;
-        Boolean flush = (Boolean) this.context.getDefault("SEQUENCE.FLUSH", Boolean.valueOf(false));
+        this.fetchSize = PropertyMap.getIntegerDefault(this.module.getSequences(), FlowTag.FETCHSIZE, 0);
+        this.sizeForUpdateHandler = fetchSize < 1000 ? 3000 : fetchSize * 3;
+        this.flush = (Boolean) PropertyMap.getDefault(this.module.getSequences(), FlowTag.FLUSH, Boolean.valueOf(false));
+
+        this.ps = this.connection.prepareStatement(query);
+        this.resultSet = ps.executeQuery();
+
+        if (fetchSize > 0) {
+            this.resultSet.setFetchSize(fetchSize);
+        }
+    }
+
+    @Override
+    public List<Map> readPartially(MappingRule rule) throws Exception {
         List<Map> result = new ArrayList<>();
-        try (PreparedStatement ps = this.connection.prepareStatement(query)) {
-            ResultSet rs = ps.executeQuery();
-            if (fetchSize > 0 ) {
-                rs.setFetchSize(fetchSize);
-            }
-            ResultSetMetaData rsmeta = rs.getMetaData();
 
-            int count = rsmeta.getColumnCount();
-            int c = 0, retrieve = 0;
-            while (rs.next()) {
-                if (!flush) {
-                    Map<String, Object> column = new LinkedHashMap<>();
-                    for (int i = 1; i <= count; i++) {
-                        Object row = rs.getObject(i);
+        ResultSetMetaData rsmeta = this.resultSet.getMetaData();
 
-                        if (row instanceof oracle.sql.TIMESTAMP) {
-                            // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
-                            row = ((oracle.sql.TIMESTAMP)row).timestampValue();
-                        }
-                        // TODO process Clob and skip Blob
-                        column.put(rsmeta.getColumnLabel(i), row);
+
+        int count = rsmeta.getColumnCount();
+        int c = 0;
+        while (this.resultSet.next()) {
+            if (!this.flush) {
+                Map<String, Object> column = new LinkedHashMap<>();
+                for (int i = 1; i <= count; i++) {
+                    Object row = rs.getObject(i);
+
+                    if (row instanceof oracle.sql.TIMESTAMP) {
+                        // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                        row = ((oracle.sql.TIMESTAMP)row).timestampValue();
                     }
-
-                    result.add(column);
+                    // TODO process Clob and skip Blob
+                    column.put(rsmeta.getColumnLabel(i), row);
                 }
 
-                c++;
-                if (c >= sizeForUpdateHandler) {
-                    retrieve += c;
-                    c = 0;
-                    this.module.setProgress(retrieve);
-                    HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
-                }
+                result.add(column);
             }
-            if (c>0) {
+
+            c++;
+            if (c >= this.sizeForUpdateHandler) {
+                this.retrieve += c;
+                c = 0;
+                this.module.setProgress(retrieve);
+                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                break;
+            }
+        }
+        if ( c>0 ) {
+            this.retrieve += c;
+            this.module.setProgress(retrieve);
+            HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+        }
+
+        return result;
+    }
+
+    @Override
+    public void afterRead() throws Exception {
+    }
+
+    @Override
+    public List<Map> read(MappingRule rule) throws Exception {
+        List<Map> result = new ArrayList<>();
+        ResultSetMetaData rsmeta = rs.getMetaData();
+
+        int count = rsmeta.getColumnCount();
+        int c = 0;
+        while (this.resultSet.next()) {
+            if (!flush) {
+                Map<String, Object> column = new LinkedHashMap<>();
+                for (int i = 1; i <= count; i++) {
+                    Object row = rs.getObject(i);
+
+                    if (row instanceof oracle.sql.TIMESTAMP) {
+                        // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                        row = ((oracle.sql.TIMESTAMP)row).timestampValue();
+                    }
+                    // TODO process Clob and skip Blob
+                    column.put(rsmeta.getColumnLabel(i), row);
+                }
+
+                result.add(column);
+            }
+
+            c++;
+            if (c >= sizeForUpdateHandler) {
                 retrieve += c;
+                c = 0;
                 this.module.setProgress(retrieve);
                 HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
-        } catch(Exception e) {
-            e.printStackTrace();
-            throw e;
+        }
+        if ( c>0 ) {
+            retrieve += c;
+            this.module.setProgress(retrieve);
+            HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
         }
 
         return result;
@@ -366,7 +490,7 @@ public class ConnectorDB extends ConnectorBase {
 
     @Override
     public void check() throws Exception {
-        String table = (String) this.context.get("SEQUENCE.TARGET");
+        String table = PropertyMap.getString(this.module.getSequences(), FlowTag.TARGET);
 
         DatabaseMetaData databaseMetaData = this.connection.getMetaData();
         ResultSet resultSet = databaseMetaData.getTables(null, null, table, new String[] {"TABLE"});
@@ -379,11 +503,9 @@ public class ConnectorDB extends ConnectorBase {
 
     @Override
     public void count() throws Exception {
-        Context channelContext = (Context) context.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
-
-        String table = this.context.getString("SEQUENCE.TARGET");
-        String sql = this.context.getString("SEQUENCE.SQL");
-        String condition = this.context.getString("SEQUENCE.CONDITION");
+        String table = PropertyMap.getString(this.module.getSequences(), FlowTag.TARGET);
+        String table = PropertyMap.getString(this.module.getSequences(), FlowTag.SQL);
+        String table = PropertyMap.getString(this.module.getSequences(), FlowTag.CONDITION);
 
         String query = "";
 
@@ -464,11 +586,11 @@ public class ConnectorDB extends ConnectorBase {
 
     @Override
     public int delete() throws Exception {
-        String table = (String) this.context.get("SEQUENCE.TARGET");
+        String table = PropertyMap.getString(this.module.getSequences(), FlowTag.TARGET); 
 
         String truncateSQL = "DELETE FROM " + table;
         try (PreparedStatement ps = this.connection.prepareStatement(truncateSQL)) {
-            int timeout = this.context.getIntegerDefault("SEQUENCE.TIMEOUT", 0);
+            int timeout = PropertyMap.getIntegerDefault(this.module.getSequences(), FlowTag.TIMEOUT, 0);
             ps.setQueryTimeout(timeout);
             ps.execute();
             this.connection.commit();
@@ -481,13 +603,9 @@ public class ConnectorDB extends ConnectorBase {
 
     @Override
     public void close() throws Exception {
-        try {
-            if( this.connection != null ) {
-                this.connection.close();
-            }
-        } finally {
-            this.connection = null;
-        }
+        try { if (this.connection != null) this.connection.close(); } finally { this.connection = null; }
+        try { if (this.ps != null) this.ps.close(); } finally { this.ps= null; }
+        try { if (this.resultSet != null) this.resultSet.close(); } finally { this.resultSet = null; }
     }
 
     @Override

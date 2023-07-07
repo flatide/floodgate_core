@@ -36,12 +36,12 @@ public class JSONContainer implements Carrier {
     private final String headerTag;
     private final String dataTag;
 
-    private final Map<String, Object> header = null;
+    private Map<String, Object> header = null;
     private Map<String, Object> data = null;
     private List<Object> buffer = null;
 
     private final int bufferSize;
-    private final int bufferReadSize = -1;
+    private int bufferReadSize = -1;
 
     private boolean isFinished = false;
 
@@ -49,7 +49,11 @@ public class JSONContainer implements Carrier {
         this.headerTag = headerTag;
         this.dataTag = dataTag;
         this.buffer = (List<Object>) data.get(dataTag);
-        this.bufferSize = this.buffer.size();
+        if (this.buffer !=- null) {
+            this.bufferSize = this.buffer.size();
+        } else {
+            this.bufferSize = 0;
+        }
 
         this.data = data;
     }

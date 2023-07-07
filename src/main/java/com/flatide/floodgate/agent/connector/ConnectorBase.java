@@ -24,61 +24,22 @@
 
 package com.flatide.floodgate.agent.connector;
 
-import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.flow.rule.FunctionProcessor;
 import com.flatide.floodgate.agent.template.DocumentTemplate;
-import com.flatide.floodgate.agent.flow.FlowTag;
-import com.flatide.floodgate.agent.flow.module.Module;
-import com.flatide.floodgate.agent.flow.stream.Payload;
-import com.flatide.floodgate.agent.flow.rule.MappingRule;
-
-import java.sql.SQLException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 
 public abstract class ConnectorBase implements Connector {
     protected String name;
 
-    Context context;
-    Module module;
-
-    String url;
-    String user;
-    String password;
-
-    private String output;
-    private Integer batchSize = 0;
-
     private DocumentTemplate documentTemplate;
 
-    DocumentTemplate getDocumentTemplate() {
+    @Override
+    public DocumentTemplate getDocumentTemplate() {
         return documentTemplate;
     }
 
+    @Override
     public void setDocumentTemplate(DocumentTemplate template) {
         this.documentTemplate = template;
-    }
-
-    protected String getOutput() {
-        return output;
-    }
-    
-    protected Context getContext() {
-        return context;
-    }
-
-    @Override
-    public void connect(Context context, Module module) throws Exception {
-        this.context = context;
-        this.module = module;
-
-        this.url = this.context.getString("CONNECT_INFO." + ConnectorTag.URL.name());
-        this.user = this.context.getString("CONNECT_INFO." + ConnectorTag.USER.name());
-        this.password = this.context.getString("CONNECT_INFO." + ConnectorTag.PASSWORD.name());
-
-        this.output = this.context.getString("SEQUENCE." + FlowTag.TARGET.name());
-        this.batchSize = this.context.getIntegerDefault("SEQUENCE." + FlowTag.BATCHSIZE.name(), 1);
     }
 
     @Override
@@ -87,6 +48,7 @@ public abstract class ConnectorBase implements Connector {
     @Override
     public void count() throws Exception {}
 
+    /*
     @Override
     //public final long createForStream(Payload payload, MappingRule mappingRule) throws Exception {
     public final long create(Payload payload, MappingRule mappingRule) throws Exception {
@@ -139,15 +101,7 @@ public abstract class ConnectorBase implements Connector {
     }
 
     public void beforeCreate(MappingRule mappingRule) throws Exception {}
-
-    public void commit() throws SQLException {};
-
-    public void rollback() throws SQLException {};
-
-    public abstract int creating(List<Map<String, Object>> itemList, MappingRule mappingRule, long index, int batchSize) throws Exception;
-    public int creatingBinary(byte[] item, long size, long sent) throws Exception { return 0;}
-
-    public void afterCreate(MappingRule mappingRule) throws Exception  {}
+    */
 
     public FunctionProcessor getFunctionProcessor(String type) {
         return null;

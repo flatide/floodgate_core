@@ -25,22 +25,39 @@
 package com.flatide.floodgate.agent.connector;
 
 import com.flatide.floodgate.agent.Context;
-import com.flatide.floodgate.agent.flow.stream.Payload;
+import com.flatide.floodgate.agent.template.DocumentTemplate;
 import com.flatide.floodgate.agent.flow.module.Module;
+import com.flatide.floodgate.agent.flow.rule.FunctionProcessor;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 
 import java.util.List;
 import java.util.Map;
 
 public interface Connector {
+    DocumentTemplate getDocumentTemplate();
+    void setDocumentTemplate(DocumentTemplate template);
+    public FunctionProcessor getFunctionProcessor(String type);
+
     void connect(Context context, Module module) throws Exception;
 
     void check() throws Exception;
     void count() throws Exception;
-    long create(Payload payload, MappingRule mappingRule) throws Exception;
+
+    void beforeRead(MappingRule rule) throws Exception;
     List<Map> read(MappingRule rule) throws Exception;
+    List<Map> readPartially(MappingRule rule) throws Exception;
+    void afterRead() throws Exception;
+
+    void beforeCreate(MappingRule rule) throws Exception;
+    int create(List<Map> items, MappingRule mappingRule) throws Exception;
+    int createPartially(List<Map> items, MappingRule mappingRule) throws Exception;
+    void afterCreate(MappingRule rule) throws Exception;
+
     int update(MappingRule mappingRule, Object data) throws Exception;
     int delete() throws Exception;
+
+    void commit() throws Exception;
+    void rollback() throws Exception;
 
     void close() throws Exception;
 

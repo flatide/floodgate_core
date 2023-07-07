@@ -27,28 +27,31 @@ package com.flatide.floodgate.agent.flow;
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
-import com.flatide.floodgate.agent.handler.HandlerManager;
-import com.flatide.floodgate.agent.handler.HandlerManager.Step;
+import com.flatide.floodgate.system.utils.PropertyMap;
 import com.flatide.floodgate.agent.flow.module.Module;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/*
-    하나의 인터페이스를 의미한다
- */
-
 public class Flow {
-    private final Context context;
+    private final Context channelContext;
+    protected FlowwContext context;
 
     private final String flowId;
     private final String targetId;
 
-    private FlowContext flowContext;
-
     private String result;
     private String msg;
+
+    public Context getChannelContext() {
+        return channelContext;
+    }
+
+    public FlowContext getContext() {
+        return context;
+    }
 
     public String getFlowId() {
         return flowId;
@@ -80,29 +83,29 @@ public class Flow {
         this.flowId = id.toString();
         this.targetId = targetId;
 
-        this.context = context;
+        this.channelContext = context;
     }
 
     public Flow(String flowId, String targetId, Context context) {
         this.flowId = flowId;
         this.targetId = targetId;
 
-        this.context = context;
+        this.channelContext = context;
     }
     
     public void prepare(Map<String, Object> flowInfo, FGInputStream input) {
-        this.flowContext = new FlowContext(this.flowId, flowInfo);
-        this.flowContext.setCurrent(input);
+        this.context = new FlowContext(this.flowId, flowInfo);
+        this.context.setCurrent(input);
 
-        String method = context.getString(Context.CONTEXT_KEY.HTTP_REQUEST_METHOD);
+        String method = channelContext.getString(Context.CONTEXT_KEY.HTTP_REQUEST_METHOD);
         Object entryMap = flowInfo.get(FlowTag.ENTRY.name());
         if( entryMap instanceof Map) {
             entryMap = (String)((Map<String, String>)entryMap).get(method);
         }
-        this.flowContext.setEntry((String) entryMap);
+        this.context.setEntry((String) entryMap);
 
-        this.flowContext.setDebug((Boolean) flowInfo.get(FlowTag.DEBUG.name()));
-        this.flowContext.add(CONTEXT_KEY.CHANNEL_CONTEXT, context);
+        this.context.setDebug((Boolean) flowInfo.get(FlowTag.DEBUG.name()));
+        this.context.add(CONTEXT_KEY.CHANNEL_CONTEXT, channelContext);
         context.add(CONTEXT_KEY.FLOW_CONTEXT, this.flowContext);
 
         // Module
@@ -111,7 +114,7 @@ public class Flow {
         if (mods != null) {
             for( Map.Entry<String, Map<String, Object>> entry : mods.entrySet() ) {
                 Module module = new Module( this, entry.getKey(), entry.getValue());
-                this.flowContext.getModules().put( entry.getKey(), module);
+                this.context.getModules().put( entry.getKey(), module);
             }
         }
 
@@ -131,44 +134,61 @@ public class Flow {
                 @SuppressWarnings("unchecked")
                 Map<String, String> temp = (Map<String, String>) entry.getValue();
                 rule.addRule( temp );
-                this.flowContext.getRules().put( entry.getKey(), rule );
+                this.context.getRules().put( entry.getKey(), rule );
             }
         }
     }
 
     public FGInputStream process() throws Exception {
-        String entry = this.flowContext.getString("CONTEXT.REQUEST_PARAMS.entry");
+        String entry = context.getString("CONTEXT.REQUEST_PARAMS.entry");
         if( entry == null || entry.isEmpty() ) {
-            entry = this.flowContext.getEntry();
+            entry = context.getEntry();
         }
         
-        this.flowContext.setNext(entry);
-        while( this.flowContext.hasNext()  ) {
-            Module module = this.flowContext.next();
-
-            if (!(this instanceof FlowMockup)) {
-                HandlerManager.shared().handle(Step.MODULE_IN, this.context, module);
-            }
+        this.context.setNext(entry);
+        while( this.context.hasNext()  ) {
+            Module module = this.context.next();
+            Module joinModule = null;
 
             try {
-                module.processBefore(flowContext);
-                module.process(flowContext);
-                module.processAfter(flowContext);
+                module.processBefore(this, context);
+                
+                String joinTarget = PropertyMap.getStringDefault(module.getSequences(), FlowTag.PIPE, "");
+                if (!joinTarget.isEmpty()) {
+                    this.context.setNext(joinTarget);
+                    if (this.context.hasNext()) {
+                        joinModule = this.context.next();
+                        joinModule.processBefore(this, context);
+                    } else {
+                        throw new Exception("Cannot find target module to pipe with.");
+                    }
 
-                module.setResult("success");
-                module.setMsg("");
-            } catch(Exception e) {
+                    booelan complete = false;
+
+                    while (!complete) {
+                        List part = module.processPartially(this, context, null);
+                        if (part == null) {
+                            complete = true;
+                        }
+                        joinModule.processPartially(this, context, part);
+                    }
+                } else {
+                    module.process(this, context);
+                }
+            } catch (Exception e) {
                 e.printStackTrace();
-                module.setResult("fail");
-                module.setMsg(e.getMessage());
                 throw e;
             } finally {
-                if (!(this instanceof FlowMockup)) {
-                    HandlerManager.shared().handle(Step.MODULE_OUT, context, module);
+                try {
+                    module.processAfter(this, context);
+                } finally {
+                    if (joinModule != null) {
+                        joinModule.processAfter(this, context);
+                    }
                 }
             }
         }
 
-        return this.flowContext.getCurrent();
+        return context.getCurrent();
     }
 }

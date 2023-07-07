@@ -22,42 +22,20 @@
  * SOFTWARE.
  */
 
-package com.flatide.floodgate.agent.flow;
+package com.flatide.floodgate.agent.flow.module;
 
-public enum FlowTag {
-    ENTRY,
-    DEBUG,
-    SPOOLING,
-    MODULE,
-    RULE,
-    FILTER,
+import com.flatide.floodgate.agent.Context;
+import com.flatide.floodgate.agent.flow.stream.FGInputStream;
+import com.flatide.floodgate.agent.flow.stream.Payload;
+import com.flatide.floodgate.agent.flow.module.Module;
+import com.flatide.floodgate.agent.flow.rule.MappingRule;
 
-    // For Module
-    BEFORE,
-    AFTER,
-    RESULT,
-    CALL,
-    PIPE,
+import java.util.HashMap;
+import java.util.Map;
 
-    CONNECT,
-    TEMPLATE,
-    //OUTPUT,
-    TARGET,
-    BATCHSIZE,
-    FETCHSIZE,
-    ACTION,
-    TIMEOUT,
-    SQL,
-    CONDITION,
-    LIMIT,
-
-    // For Action
-
-    FLUSH,
-    CHECK,
-    COUNT,
-    CREATE,
-    READ,
-    UPDATE,
-    DELETE
+public class ModuleContext extends Context {
+    public enum MODULE_CONTEXT {
+        CONNECT_INFO,
+        SEQUENCE
+    }
 }

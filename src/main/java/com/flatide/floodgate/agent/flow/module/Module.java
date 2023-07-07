@@ -28,17 +28,22 @@ import com.flatide.floodgate.ConfigurationManager;
 import com.flatide.floodgate.FloodgateConstants;
 import com.flatide.floodgate.agent.template.DocumentTemplate;
 import com.flatide.floodgate.agent.connector.ConnectorTag;
+import com.flatide.floodgate.system.utils.PropertyMap;
 import com.flatide.floodgate.agent.Context;
-import com.flatide.floodgate.agent.connector.ConnectorBase;
+import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
+import com.flatide.floodgate.agent.connector.Connector;
 import com.flatide.floodgate.agent.flow.Flow;
 import com.flatide.floodgate.agent.flow.FlowContext;
 import com.flatide.floodgate.agent.flow.FlowMockup;
 import com.flatide.floodgate.agent.flow.FlowTag;
+import com.flatide.floodgate.agent.flow.module.ModuleContext.MODULE_CONTEXT;
 import com.flatide.floodgate.agent.connector.ConnectorFactory;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
 import com.flatide.floodgate.agent.flow.stream.FGSharableInputStream;
 import com.flatide.floodgate.agent.flow.stream.Payload;
 import com.flatide.floodgate.agent.flow.stream.carrier.container.JSONContainer;
+import com.flatide.floodgate.agent.handler.HandlerManager;
+import com.flatide.floodgate.agent.handler.HandlerManager.Step;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 import com.flatide.floodgate.agent.meta.MetaManager;
 import org.apache.logging.log4j.LogManager;
@@ -46,6 +51,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -54,27 +60,52 @@ public class Module {
     // NOTE spring boot의 logback을 사용하려면 LogFactory를 사용해야 하나, 이 경우 log4j 1.x와 충돌함(SoapUI가 사용)
     private static final Logger logger = LogManager.getLogger(Module.class);
 
+    private FlowContext flowContext;
+    private ModuleContext context;
+
     private final String id;
     private final String name;
     private final Map<String, Object> sequences;
     private final Flow flow;
 
+    private Connector connector = null;
+    private Map connInfo = null;
+
     private Integer progress = 0;
 
     private String result;
-    private String msg;
+    private String msg = "";
 
-    public Module(Flow flow, String name, Map<String, Object> data) {
+    private List<Map> resultList;
+
+    public Module(Flow flow, String name, Map<String, Object> sequences) {
         this.flow = flow;
         this.name = name;
-        this.sequences = data;
+        this.sequences = sequences;
 
         UUID id = UUID.randomUUID();
         this.id = id.toString();
+
+        context = new ModuleContext();
+
+        flowContext = flow.getContext();
+        context.add(CONTEXT_KEY.CHANNEL_CONTEXT, flow.getChannelContext());
     }
 
+    public FlowContext getFlowContext() {
+        return flowContext;
+    }
+
+    public ModuleContext getContext() {
+        return context;
+    }
+    
     public String getName() {
         return name;
+    }
+
+    public Map<String, Object> getSequences() {
+        return sequences;
     }
 
     public String getId() {
@@ -112,49 +143,48 @@ public class Module {
     /*
         FlowContext의 input에 대한 처리
     */
-    public void processBefore(FlowContext flowContext) {
-    }
 
-    public void process(FlowContext flowContext) throws Exception {
-        if (this.sequences != null) {
-            ConnectorBase connector;
-
-            Object connectRef = this.sequences.get(FlowTag.CONNECT.name());
-            Map connInfo;
-            if (connectRef == null) {
-                logger.info(flowContext.getId() + " : No connect info for module " + this.name);
-            } else {
-                if (connectRef instanceof String) {
-                    String table = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_DATASOURCE);
-                    Map connMeta = MetaManager.shared().read(table, (String) connectRef);
-                    connInfo = (Map) connMeta.get("DATA");
+    public void processBefore(Flow flow, FlowContext flowContext) throws Exception {
+        if (!(flow instanceof FlowMockup)) {
+            HandlerManager.shared().handle(Step.MODULE_IN, flow.getChannelContext(), this);
+        }
+        try {
+            if (this.sequences != null) {
+                Object connectRef = this.sequences.get(FlowTag.CONNECT.name());
+                if (connectRef == null) {
+                    logger.info(flowContext.getId() + " : No connect info for module " + this.name);
                 } else {
-                    connInfo = (Map) connectRef;
-                }
-
-                connector = ConnectorFactory.shared().getConnector(connInfo);
-
-                String templateName = (String) this.sequences.get(FlowTag.TEMPLATE.name());
-                String builtInTemplate = "";
-                if( templateName == null || templateName.isEmpty()) {
-                    String method = (String) connInfo.get(ConnectorTag.CONNECTOR.name());
-                    if ("FILE".equals(method)) {
-                        builtInTemplate = "JSON";
+                    if (connectRef instanceof String) {
+                        String table = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_DATASOURCE);
+                        Map connMeta = MetaManager.shared().read(table, (String) connectRef);
+                        connInfo = (Map) connMeta.get("DATA");
                     } else {
-                        builtInTemplate = method;
+                        connInfo = (Map) connectRef;
                     }
-                }
 
-                DocumentTemplate documentTemplate = DocumentTemplate.get(templateName, builtInTemplate, false);
-                connector.setDocumentTemplate(documentTemplate);
+                    connector = ConnectorFactory.shared().getConnector(connInfo);
 
-                flowContext.add("CONNECT_INFO", connInfo);
-                flowContext.add("SEQUENCE", this.sequences);
-                try {
+                    String templateName = (String) this.sequences.get(FlowTag.TEMPLATE.name());
+                    String builtInTemplate = "";
+                    if (templateName == null || templateName.isEmpty()) {
+                        String method = (String) connInfo.get(ConnectorTag.CONNECTOR.name());
+                        if ("FILE".equals(method)) {
+                            builtInTemplate = "JSON";
+                        } else {
+                            builtInTemplate = method;
+                        }
+                    }
+
+                    DocumentTemplate documentTemplate = DocumentTemplate.get(templateName, builtInTemplate, false);
+                    connector.setDocumentTemplate(documentTemplate);
+
+                    this.context.add(MODULE_CONTEXT.CONNECT_INFO, connInfo);
+                    this.context.add(MODULE_CONTEXT.SEQUENCE, this.sequences);
+
                     if( this.flow instanceof FlowMockup ) {
-                        Context context = (Context) flowContext.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
+                        Context channelContext = (Context) flowContext.get(Context.CONTEXT_KEY.CHANNEL_CONTEXT);
 
-                        List<Map<String, Object>> itemList = (List) context.get("ITEM");
+                        List<Map<String, Object>> itemList = (List) channelContext.get("ITEM");
                         List<Map<String, Object>> temp = new ArrayList<>();
                         Map<String, Object> one = itemList.get(0);
                         Map<String, Object> copy = new HashMap<>();
@@ -168,91 +198,237 @@ public class Module {
                         String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
                         rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
 
-                        String query = documentTemplate.makeHeader(flowContext, rule, temp);
+                        String query = documentTemplate.makeHeader(this.context, rule, temp);
                         List<String> param = rule.getParam();
 
                         for( String p : param ) {
                             query = query.replaceFirst("\\?", p);
                         }
-                        context.add("QUERY", query);
+                        channelContext.add("QUERY", query);
                         return;
                     }
+                }
 
-                    connector.connect(flowContext, this);
+                connector.connect(flowContext, this);
 
-                    String action = (String) this.sequences.get(FlowTag.ACTION.name());
+                String action = (String) this.sequences.get(FlowTag.ACTION.name());
 
-                    switch(FlowTag.valueOf(action)) {
-                        case CHECK:
-                        {
-                            connector.check();
-                            flowContext.setCurrent(null);
-                            break;
-                        }
-                        case COUNT:
-                        {
-                            connector.count();
-                            flowContext.setCurrent(null);
-                            break;
-                        }
-                        case READ:
-                        {
-                            String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
-                            MappingRule rule = flowContext.getRules().get(ruleName);
-                            List result = connector.read(rule);
-
-                            if("BYPASS".equals(sequences.get(FlowTag.RESULT.name()))) {
-                                Map<String, Object> data = new HashMap<>();
-                                data.put("ITEMS", result);
-                                FGInputStream stream = new FGSharableInputStream( new JSONContainer(data, "HEADER", "ITEMS") );
-                                flowContext.setCurrent(stream);
-                            } else {
-                                flowContext.setCurrent(null);
-                            }
-                            break;
-                        }
-                        case CREATE:
-                            String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
-                            MappingRule rule = flowContext.getRules().get(ruleName);
-
-                            String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
-                            rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
-
-                            Payload payload = null;
-
-                            FGInputStream currentStream = flowContext.getCurrent();
-                            if( currentStream != null ) {
-                                payload = flowContext.getCurrent().subscribe();
-                                //Payload payload = context.getPayload();
-                            }
-                            //logger.info(data.toString());
-                            connector.create(payload, rule);
-
-                            flowContext.getCurrent().unsubscribe(payload);
-                            flowContext.setCurrent(null);
-                            break;
-                        case DELETE:
-                            connector.delete();
-                            break;
-                        default:
-                            break;
+                switch(FlowTag.valueOf(action)) {
+                    case CHECK:
+                    {
+                        connector.check();
+                        flowContext.setCurrent(null);
+                        setResult("success");
+                        break;
                     }
+                    case COUNT:
+                    {
+                        connector.count();
+                        flowContext.setCurrent(null);
+                        setResult("success");
+                        break;
+                    }
+                    case READ:
+                    {
+                        String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
+                        MappingRule rule = flowContext.getRules().get(ruleName);
 
-                    String next = (String) this.sequences.get(FlowTag.CALL.name());
-                    flowContext.setNext(next);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    throw e;
-                } finally {
-                    connector.close();
+                        connector.beforeRead(rule);
+                        break;
+                    }
+                    case CREATE:
+                        String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
+                        MappingRule rule = flowContext.getRules().get(ruleName);
+
+                        String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
+                        rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
+
+                        connector.beforeCreate(rule);
+                        break;
+                    case DELETE:
+                        connector.delete();
+                        setResult("success");
+                        break;
+                    default:
+                        break;
                 }
             }
+        } catch (Exception e) {
+            setResult("fail");
+            setMsg(e.getMessage());
+            e.printStackTrace();
+            throw e;
         }
     }
 
-    /*
-        FlowContext의 output에 대한 처리
-     */
+    public void processPartially(Flow flow, FlowContext flowContext, List buffer) throws Exception {
+        try {
+            String action = (String) this.sequences.get(FlowTag.ACTION.name());
+
+            switch (FlowTag.valueOf(action)) {
+                case READ:
+                {
+                    String ruleName = (String) this.sequences(FlowTag.RULE.name());
+                    MappingRule rule = flowContext.getRules().get(ruleName);
+
+                    List part = connector.readPartially(rule);
+                    if (part.isEmpty()) {
+                        setReresult("success");
+                        return null;
+                    }
+                    return part;
+                }
+                case CREATE:
+                    String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
+                    MappingRule rule = flowContext.getRules().get(ruleName);
+
+                    connector.createPartially(buffer, rule);
+                    if (buffer == null) {
+                        setResult("success");
+                        setMsg("");
+                    }
+                    return null;
+                default:
+                return null;
+            }
+        } catch (Exception e) {
+            connetor.rollback();
+            setResult("fail");
+            setMsg(e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    public void process(Flow foow, FlowContext flowContext) throws Exception {
+        try {
+            String action = (String) this.sequences(FlowTag.ACTION.name());
+
+            switch (FlowTag.valueOf(action)) {
+                case READ:
+                {
+                    String ruleName = (String) this.sequences(FlowTag.RULE.name());
+                    MappingRule rule = flowContext.getRules().get(ruleName);
+
+                    resultList = connector.read(rule);
+
+                    if( "BYPASS".equals(sequences.get(FlowTag.RESULT.name()))) {
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("ITEMS", resultList);
+                        FGInputStream stream = new FGSharableInputStream(new JSONContainer(data, "HEADER", "ITEMS"));
+                        flowContext.setCurrent(stream);
+                    } else {
+                        flowContext.setCurrent(null);
+                    }
+                    break;
+                }
+                case CREATE:
+                    String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
+                    MappingRule rule = flowContext.getRules().get(ruleName);
+
+                    String dbType = (Strin) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
+                    rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
+
+                    Payload payload = null;
+
+                    FGInputStream currentStream = flowContext.getCurrent();
+                    if (currentStream != null) {
+                        payload = flowContext.getCurrent().subscribe();
+                    }
+
+                    long sent = 0;
+                    List itemList = new LinkedList<Map<String, Object>>();
+
+                    Integer batchSize = PropertyMap.getIntegerDefault(this.sequences, FlowTag.BATCHSIZE, 1);
+                    try {
+                        while (payload.next() != -1) {
+                            Object dataList = payload.getData();
+                            long length = payload.getReadLength();
+
+                            if (dataList instanceof List) {
+                                @SuppressWarnings("unchecked")
+                                List temp = (List) dataList;
+                                itemList.addAll(temp);
+
+                                if (batchSize > 0 && itemList.size() >= batchSize) {
+                                    List sub = itemList.subList(0, batchSize);
+                                    connector.create(sub, rule);
+                                    sent += batchSize;
+                                    sub.clear();
+                                }
+                            } else {
+                                sent += length;
+                            }
+                        }
+
+                        if (itemList.size > 0) {
+                            connector.create(itemList, rule);
+                            sent += itemList.size();
+                            itemList.clear();
+                        }
+
+                        flowContext.getCurrent().unsubscribe(payload);
+                        flowContext.setCurrent(null);
+                    } catch (Exception e) {
+                        connector.rollback();
+                        throw e;
+                    }
+                    break;
+            }
+
+            setResult("success");
+            setMsg("");
+        } catch (Exception e) {
+            setResult("fail");
+            setMsg(e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
     public void processAfter(FlowContext context) {
+        try {
+            String action = (String) this.sequences.get(FlowTag.ACTION.name());
+
+            switch (FlowTag.valueOf(action)) {
+                case READ:
+                {
+                    connector.afterRead();
+
+                    flowContext.setCurrent(null);
+                    break;
+                }
+                case CREATE:
+                {
+                    String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
+                    MappingRule rule = flowContext.getRules().get(ruleName);
+
+                    String after = PropertyMap.getStringDefault(this.sequences, "AFTER", "COMMIT");
+                    if ("COMMIT".equals(afetr)) {
+                        connector.commit();
+                    } else if ("ROLLBACK".euqals(after)) {
+                        connector.rollback();
+                    }
+                    connector.afterCreate(rule);
+
+                    flowContext.setCurrent(null);
+                    break;
+                }
+            }
+
+            connector.close();
+
+            String next = (String) this.sequences.get(FlowTag.CALL.name());
+            flowContext.setNext(next);
+        } catch (Exception e) {
+            setREsult("fail");
+            setMsg(e.getMessage());
+            e.printStackTrace();
+            throw e;
+        } finally {
+            if (!(flow instanceof FlowMockup)) {
+                HandlerManager.shared().handle(Step.MODULE_OUT, flow.getChannelContext(), this);
+            }
+        }
     }
 }

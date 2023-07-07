@@ -26,6 +26,7 @@ package com.flatide.floodgate.agent.flow;
 
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
+import com.flatide.floodgate.system.utils.PropertyMap;
 import com.flatide.floodgate.agent.flow.module.Module;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 
@@ -42,5 +43,26 @@ public class FlowMockup extends Flow {
 
     public FlowMockup(String flowId, String targetId, Context context) {
         super(flowId, targetId, context);
+    }
+
+    public FGInputStream process() throws Exception {
+        String entry = this.context.getString("CONTEXT.REQUEST_PARAMS.entry");
+        if (entry == null || entry.isEmpty()) {
+            entry = this.context.getEntry();
+        }
+
+        this.context.setNext(entry);
+        while (this.context.hasNexts()) {
+            Module module = this.context.next();
+
+            try {
+                module.processBefore(this, this.context);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw e;
+            }
+        }
+
+        return this.context.getCurrent();
     }
 }

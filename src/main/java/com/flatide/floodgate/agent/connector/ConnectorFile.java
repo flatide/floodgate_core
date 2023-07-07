@@ -28,8 +28,12 @@ import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 import com.flatide.floodgate.agent.flow.rule.MappingRuleItem;
 import com.flatide.floodgate.agent.flow.rule.FunctionProcessor;
+import com.flatide.floodgate.agent.flow.FlowTag;
 import com.flatide.floodgate.agent.flow.module.Module;
+import com.flatide.floodgate.agent.flow.module.ModuleContext;
+import com.flatide.floodgate.agent.flow.module.ModuleContext.MODULE_CONTEXT;
 import com.flatide.floodgate.system.FlowEnv;
+import com.flatide.floodgate.system.utils.PropertyMap;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -40,6 +44,7 @@ import java.util.*;
 public class ConnectorFile extends ConnectorBase {
     // NOTE spring boot의 logback을 사용하려면 LogFactory를 사용해야 하나, 이 경우 log4j 1.x와 충돌함(SoapUI가 사용)
     //Logger logger = LogManager.getLogger(FileConnector.class);
+    Module module = null;
 
     private BufferedOutputStream outputStream;
 
@@ -75,27 +80,37 @@ public class ConnectorFile extends ConnectorBase {
 
     @Override
     public void connect(Context context, Module module) throws Exception {
-        super.connect(context, module);
+        this.module = module;
 
-        String filename = context.evaluate(getOutput());
-        this.outputStream = new BufferedOutputStream(new FileOutputStream(new File(this.url + "/" + filename)));
+        Map connectiInfo = (Map) module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
+        String url = PropertyMap.getString(connectInfo, ConnectorTag.URL);
+
+        String target = (String) module.getSequences().get(FlowTag.TARGET);
+        String filename = context.evaluate(target);
+        this.outputStream = new BufferedOutputStream(new FileOutputStream(new File(url + "/" + filename)));
     }
 
     @Override
     public void beforeCreate(MappingRule mappingRule) throws Exception {
+        ModuleContext context = this.module.getContext();
         String header = getDocumentTemplate().makeHeader(context, mappingRule, null);
         this.outputStream.write(header.getBytes());
-
-        super.beforeCreate(mappingRule);
     }
 
     @Override
-    public int creating(List<Map<String, Object>> itemList, MappingRule mappingRule, long index, int batchSize) throws Exception {
-        String body = getDocumentTemplate().makeBody(context, mappingRule, itemList, index);
+    public int create(List<Map> itemList, MappingRule mappingRule) throws Exception {
+        ModuleContext contexts = this.module.getContext();
+        String body = getDocumentTempalte().makeBody(context, mappingRule, itemList, sent);
+
         this.outputStream.write(body.getBytes());
 
         this.sent += itemList.size();
         return itemList.size();
+    }
+
+    @Override
+    public int createPartially(List<Map> items, MappingRule mappingRule) throws Exception {
+        return 0;
     }
 
     @Override
@@ -107,12 +122,24 @@ public class ConnectorFile extends ConnectorBase {
 
     @Override
     public void afterCreate(MappingRule mappingRule) throws Exception {
+        ModuleContext context = this.module.getContext();
         String footer = getDocumentTemplate().makeFooter(context, mappingRule, null);
         this.outputStream.write(footer.getBytes());
 
         this.outputStream.flush();
+    }
 
-        super.afterCreate(mappingRule);
+    @Override
+    public void beforeRead(MappingRule rule) throws Exception {
+    }
+
+    @Override
+    public List<Map> readPartially(MappingRule rule) throws Exception {
+        return null;
+    }
+
+    @Override
+    public void afterRead() throws Exception {
     }
 
     @Override
@@ -128,6 +155,14 @@ public class ConnectorFile extends ConnectorBase {
     @Override
     public int delete() {
         return 0;
+    }
+
+    @Override
+    public void commit() throws Exception {
+    }
+
+    @Override
+    public void rollback() throws Exception {
     }
 
     @Override

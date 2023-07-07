@@ -52,11 +52,11 @@ public class ChannelAgent {
     }
 
     public void addContext(CONTEXT_KEY key, Object value) {
-        this.context.add(key.name(), value);
+        this.context.add(key, value);
     }
 
     public Object getContext(CONTEXT_KEY key) {
-        return this.context.get(key.name());
+        return this.context.get(key);
     }
 
     public Object getContext(String key) { return this.context.get(key); }
