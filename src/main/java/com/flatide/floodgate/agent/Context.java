@@ -46,7 +46,8 @@ public class Context {
         REQUEST_BODY,
         HTTP_REQUEST_METHOD,
 
-        FLOW,
+        API_META,
+        FLOW_META,
 
         CHANNEL_CONTEXT,
         FLOW_CONTEXT,

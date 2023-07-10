@@ -61,9 +61,17 @@ public class ChannelAgent {
 
     public Object getContext(String key) { return this.context.get(key); }
 
-    public Map<String, Object> process(FGInputStream stream, String api, Map flow) throws Exception {
-        Map flowInfo = (Map) flow.get("FLOW");
-        addContext(CONTEXT_KEY.FLOW, flowInfo);
+    public Map<String, Object> process(FGInputStream stream, String api, Map meta) throws Exception {
+        Map apiMeta = (Map) meta.get("API");
+        if (apiMeta != null) {
+            addContext(CONTEXT_KEY.API_META, apiMeta);
+        }
+
+        Map flowInfo = (Map) meta.get("FLOW");
+        if (flowInfo != null) {
+            addContext(CONTEXT_KEY.FLOW_META, flowInfo);
+        }
+
         return process(stream, api);
     }
 
@@ -80,7 +88,10 @@ public class ChannelAgent {
         String apiTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_API);
         Map apiMeta = MetaManager.shared().read( apiTable, api);
         if( apiMeta == null ) {
-            throw new Exception("Cannot find resource " + api);
+            apiMeta = (Map) getContext(CONTEXT_KEY.API_META);
+            if (apiMeta == null) {
+                throw new Exception("Cannot find resource " + api);
+            }
         }
         Map apiInfo = (Map) apiMeta.get("DATA");
 

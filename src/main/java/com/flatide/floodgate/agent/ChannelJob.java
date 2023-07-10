@@ -85,7 +85,7 @@ public class ChannelJob implements Callable<Map> {
 
         try {
             // If FLOW exists in request body when API type is Instant Interfacing
-            Map<String, Object> flowInfo = (Map) this.context.get(Context.CONTEXT_KEY.FLOW.toString());
+            Map<String, Object> flowInfo = (Map) this.context.get(Context.CONTEXT_KEY.FLOW_META.toString());
             if( flowInfo == null ) {
                 String flowInfoTable = ConfigurationManager.shared().getString(FloodgateConstants.META_SOURCE_TABLE_FOR_FLOW);
                 Map flowMeta = MetaManager.shared().read( flowInfoTable, target);
