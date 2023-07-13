@@ -46,6 +46,7 @@ public interface Connector {
     void beforeRead(MappingRule rule) throws Exception;
     List<Map> read(MappingRule rule) throws Exception;
     List<Map> readPartially(MappingRule rule) throws Exception;
+    int readBuffer(MappingRule rule, List buffer, int limit) throws Exception;
     void afterRead() throws Exception;
 
     void beforeCreate(MappingRule rule) throws Exception;

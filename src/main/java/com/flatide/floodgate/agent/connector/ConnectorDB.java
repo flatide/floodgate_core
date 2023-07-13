@@ -81,6 +81,8 @@ public class ConnectorDB extends ConnectorBase {
 
     private int sent = 0;
 
+    private int updateCount = 0;
+
     private long cur;
 
     private static class DBFunctionProcessorMySql implements FunctionProcessor {
@@ -234,6 +236,7 @@ public class ConnectorDB extends ConnectorBase {
                         HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
                     }
                 }
+                itemList.clear();
             }
             if (itemList == null && batchCount > 0) {
                 ps.setQueryTimeout(timeout);
@@ -399,6 +402,51 @@ public class ConnectorDB extends ConnectorBase {
         if (fetchSize > 0) {
             this.resultSet.setFetchSize(fetchSize);
         }
+    }
+
+    @Override
+    public int readBuffer(MappingRule rule, List buffer, int limit) throws Exception {
+        ResultSetMetaData rsmeta = this.resultSet.getMetaData();
+
+        int count = rsmeta.getColumnCount();
+        int c = 0;
+        while (this.resultSet.next()) {
+            if (!this.flush) {
+                Map<String, Object> column = new LinkedHashMap<>();
+                for (int i = 1; i <= count; i++) {
+                    Object row = this.resultSet.getObject(i);
+
+                    if (row instanceof oracle.sql.TIMESTAMP) {
+                        // Jackson cannot (de)serialize oracle.sql.TIMESTAMP, converting it to java.sql.Timestamp
+                        row = ((oracle.sql.TIMESTAMP)row).timestampValue();
+                    }
+                    // TODO process Clob and skip Blob
+                    column.put(rsmeta.getColumnLabel(i), row);
+                }
+
+                buffer.add(column);
+            }
+
+            c++;
+            if (c >= limit) {
+                this.retrieve += c;
+                c = 0;
+                break;
+            }
+            if (this.updateCount >= this.sizeForUpdateHandler) {
+                this.updateCount = 0;
+                this.module.setProgress(retrieve);
+                HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
+                break;
+            }
+        }
+        if ( c > 0 ) {
+            this.retrieve += c;
+            this.module.setProgress(retrieve);
+            HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
+        }
+
+        return buffer.size();
     }
 
     @Override

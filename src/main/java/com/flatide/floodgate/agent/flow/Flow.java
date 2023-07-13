@@ -31,6 +31,7 @@ import com.flatide.floodgate.system.utils.PropertyMap;
 import com.flatide.floodgate.agent.flow.module.Module;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -164,13 +165,15 @@ public class Flow {
                     }
 
                     boolean complete = false;
-
+                    
+                    List<Map> buffer = new ArrayList<>();
                     while (!complete) {
-                        List part = module.processPartially(this, context, null);
-                        if (part == null) {
+                        //List part = module.processPartially(this, context, null);
+                        module.processPartially(this, context, buffer);
+                        if (buffer.isEmpty()) {
                             complete = true;
                         }
-                        joinModule.processPartially(this, context, part);
+                        joinModule.processPartially(this, context, buffer);
                     }
                 } else {
                     module.process(this, context);

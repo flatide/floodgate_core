@@ -275,16 +275,23 @@ public class Module {
                     String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                     MappingRule rule = flowContext.getRules().get(ruleName);
 
-                    List part = connector.readPartially(rule);
-                    if (part.isEmpty()) {
+                    Integer limit = PropertyMap.getIntegerDefault(this.sequences, FlowTag.BUFFERSIZE, 1);
+                    //List part = connector.readPartially(rule);
+                    connector.readBuffer(rule, buffer, limit);
+                    if (buffer.isEmpty()) {
                         setResult("success");
+                        buffer = null;
                         return null;
                     }
-                    return part;
+                    return buffer;
                 }
                 case CREATE:
                     String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                     MappingRule rule = flowContext.getRules().get(ruleName);
+
+                    if (buffer.isEmpty()) {
+                        buffer = null;
+                    }
 
                     connector.createPartially(buffer, rule);
                     if (buffer == null) {

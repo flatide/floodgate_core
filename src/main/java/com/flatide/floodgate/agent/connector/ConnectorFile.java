@@ -133,6 +133,11 @@ public class ConnectorFile extends ConnectorBase {
     }
 
     @Override
+    public int readBuffer(MappingRule rule, List buffer, int limit) throws Exception {
+        return 0;
+    }
+
+    @Override
     public List<Map> readPartially(MappingRule rule) throws Exception {
         return null;
     }

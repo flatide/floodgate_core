@@ -38,6 +38,7 @@ public enum FlowTag {
     RESULT,
     CALL,
     PIPE,
+    BUFFERSIZE,
 
     CONNECT,
     TEMPLATE,
