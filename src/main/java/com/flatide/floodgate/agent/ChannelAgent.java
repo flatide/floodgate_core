@@ -78,9 +78,13 @@ public class ChannelAgent {
     public Map<String, Object> process(FGInputStream current, String api) throws Exception {
         Map<String, Object> result = new HashMap<>();
 
-        // Unique ID 생성
-        UUID id = UUID.randomUUID();
-        addContext(CONTEXT_KEY.CHANNEL_ID, id.toString());
+        String channelId = (String) getContext(CONTEXT_KEY.CHANNEL_ID);
+        if (channelId == null || channelId.isEmpty()) {
+            // Unique ID 생성
+            UUID id = UUID.randomUUID();
+            channelId = id.toString();
+            addContext(CONTEXT_KEY.CHANNEL_ID, channelId);
+        }
 
         addContext(CONTEXT_KEY.API, api);
 
@@ -144,7 +148,7 @@ public class ChannelAgent {
                 if (!folder.exists()) {
                     folder.mkdir();
                 }
-                carrier.flushToFile(path + "/" + id.toString());
+                carrier.flushToFile(path + "/" + channelId);
             } catch(Exception e) {
 
             }

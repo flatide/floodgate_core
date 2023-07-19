@@ -63,4 +63,24 @@ public class DBLogHandler implements FloodgateAbstractHandler {
     @Override
     public void handleModuleProgress(Context context, Object object) {
     }
+
+    private void loggingInsert(String keyColumn, Map log) {
+        java.sql.Timestamp time = (java.sql.Timestamp) log.get("LOG_TIMESTAMP");
+        LocalDataTime local = time.toLocalDateTime();
+        int nano = local.getNano();
+        log.put("LOG_MILLI_SECONDS", nano / 1000000);
+
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(time);
+        log.put("LOG_WEEK", String.format("%02d", cal.get(3)));
+
+        log.put("LOG_HOST"), FloodgateEnv.getInstance().getAddress());
+        String table = ConfigurationManager.shared().getString("channel.log.tableForLog");
+        LoggingManager.shared().insert(table, "LOG_KEY", log);
+    }
+
+    private void loggingUpdate(String keyColumn, Map log) {
+        String table = ConfigurationManager.shared().getString("channel.log.tableForLog");
+        LoggingManager.shared().update(table, "MODULE_KEY", log);
+    }
 }

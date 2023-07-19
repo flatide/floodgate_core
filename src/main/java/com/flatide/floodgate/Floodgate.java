@@ -32,6 +32,8 @@ import com.flatide.floodgate.agent.meta.MetaManager;
 
 public class Floodgate {
     public static void init() throws Exception {
+        FloodgateEnv.getInstance().getAddress();
+
         String metaDatasource = (String) ConfigurationManager.shared().get("channel.meta.datasource");
         MetaManager.shared().changeSource(metaDatasource, false);
 
