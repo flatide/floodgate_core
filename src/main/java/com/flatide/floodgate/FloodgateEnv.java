@@ -56,15 +56,21 @@ public class FloodgateEnv {
     }
 
     private String getLocalIp() {
+        String ip = "";
         try {
             for( Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements(); ) {
                 NetworkInterface intf = en.nextElement();
                 for(Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements(); ) {
                     InetAddress inetAddress = enumIpAddr.nextElement();
+                    //System.out.println(inetAddress.toString());
                     if( !inetAddress.isLoopbackAddress() && !inetAddress.isLinkLocalAddress() && inetAddress.isSiteLocalAddress()) {
-                        return inetAddress.toString();
+                        ip = inetAddress.toString();
+                        //return inetAddress.toString();
                     }
                 }
+            }
+            if (!ip.isEmpty()) {
+                return ip;
             }
             return InetAddress.getLocalHost().getHostAddress();
         } catch(Exception e ) {
