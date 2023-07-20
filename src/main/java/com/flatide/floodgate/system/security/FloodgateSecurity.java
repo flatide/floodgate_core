@@ -25,7 +25,7 @@
 package com.flatide.floodgate.system.security;
 
 public class FloodgateSecurity {
-    private SecurityProvider provider = null;
+    private FloodgateSecurityProvider provider = null;
 
     private FloodgateSecurity() {
     }
@@ -38,7 +38,7 @@ public class FloodgateSecurity {
         private static final FloodgateSecurity instance = new FloodgateSecurity();
     }
 
-    public void setSecurityProvider(SecurityProvider provider) {
+    public void setFloodgateSecurityProvider(FloodgateSecurityProvider provider) {
         this.provider = provider;
     }
 

@@ -42,8 +42,8 @@ import com.flatide.floodgate.agent.flow.stream.FGInputStream;
 import com.flatide.floodgate.agent.flow.stream.FGSharableInputStream;
 import com.flatide.floodgate.agent.flow.stream.Payload;
 import com.flatide.floodgate.agent.flow.stream.carrier.container.JSONContainer;
-import com.flatide.floodgate.agent.handler.HandlerManager;
-import com.flatide.floodgate.agent.handler.HandlerManager.Step;
+import com.flatide.floodgate.agent.handler.FloodgateHandlerManager;
+import com.flatide.floodgate.agent.handler.FloodgateHandlerManager.Step;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 import com.flatide.floodgate.agent.meta.MetaManager;
 import org.apache.logging.log4j.LogManager;
@@ -146,7 +146,7 @@ public class Module {
 
     public void processBefore(Flow flow, FlowContext flowContext) throws Exception {
         if (!(flow instanceof FlowMockup)) {
-            HandlerManager.shared().handle(Step.MODULE_IN, flow.getChannelContext(), this);
+            FloodgateHandlerManager.shared().handle(Step.MODULE_IN, flow.getChannelContext(), this);
         }
         try {
             if (this.sequences != null) {
@@ -440,7 +440,7 @@ public class Module {
             throw e;
         } finally {
             if (!(flow instanceof FlowMockup)) {
-                HandlerManager.shared().handle(Step.MODULE_OUT, flow.getChannelContext(), this);
+                FloodgateHandlerManager.shared().handle(Step.MODULE_OUT, flow.getChannelContext(), this);
             }
         }
     }

@@ -32,8 +32,8 @@ import org.apache.logging.log4j.Logger;
 
 import com.flatide.floodgate.agent.Context;
 
-public final class HandlerManager {
-    private static final Logger logger = LogManager.getLogger(HandlerManager.class);
+public final class FloodgateHandlerManager {
+    private static final Logger logger = LogManager.getLogger(FloodgateHandlerManager.class);
 
     public enum Step {
         CHANNEL_IN,
@@ -45,15 +45,15 @@ public final class HandlerManager {
         MODULE_PROGRESS
     };
 
-    private static final HandlerManager instance = new HandlerManager();
+    private static final FloodgateHandlerManager instance = new FloodgateHandlerManager();
 
     private Map<String, FloodgateAbstractHandler> handlerList;
 
-    private HandlerManager() {
+    private FloodgateHandlerManager() {
         handlerList = new LinkedHashMap<>();
     }
 
-    public static HandlerManager shared() {
+    public static FloodgateHandlerManager shared() {
         return instance;
     }
 

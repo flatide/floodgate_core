@@ -27,8 +27,8 @@ package com.flatide.floodgate.agent.connector;
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.flow.rule.MappingRuleItem;
-import com.flatide.floodgate.agent.handler.HandlerManager;
-import com.flatide.floodgate.agent.handler.HandlerManager.Step;
+import com.flatide.floodgate.agent.handler.FloodgateHandlerManager;
+import com.flatide.floodgate.agent.handler.FloodgateHandlerManager.Step;
 import com.flatide.floodgate.agent.template.DocumentTemplate;
 import com.flatide.floodgate.agent.flow.rule.MappingRule;
 import com.flatide.floodgate.agent.flow.FlowTag;
@@ -233,7 +233,7 @@ public class ConnectorDB extends ConnectorBase {
                         batchCount = 0;
 
                         this.module.setProgress(this.sent);
-                        HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                        FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
                     }
                 }
                 itemList.clear();
@@ -243,7 +243,7 @@ public class ConnectorDB extends ConnectorBase {
                 ps.executeBatch();
                 this.sent += batchCount;
                 this.module.setProgress(this.sent);
-                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -298,7 +298,7 @@ public class ConnectorDB extends ConnectorBase {
                     count = 0;
 
                     this.module.setProgress(this.sent);
-                    HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                    FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
                 }
             }
             if (count > 0) {
@@ -306,7 +306,7 @@ public class ConnectorDB extends ConnectorBase {
                 ps.executeBatch();
                 this.sent += count;
                 this.module.setProgress(this.sent);
-                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -330,7 +330,7 @@ public class ConnectorDB extends ConnectorBase {
         this.sent = 0;
         this.connection.rollback();
         this.module.setProgress(0);
-        HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+        FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
     }
 
     @Override
@@ -436,14 +436,14 @@ public class ConnectorDB extends ConnectorBase {
             if (this.updateCount >= this.sizeForUpdateHandler) {
                 this.updateCount = 0;
                 this.module.setProgress(retrieve);
-                HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
+                FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
                 break;
             }
         }
         if ( c > 0 ) {
             this.retrieve += c;
             this.module.setProgress(retrieve);
-            HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
+            FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
         }
 
         return buffer.size();
@@ -480,14 +480,14 @@ public class ConnectorDB extends ConnectorBase {
                 this.retrieve += c;
                 c = 0;
                 this.module.setProgress(retrieve);
-                HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
+                FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
                 break;
             }
         }
         if ( c > 0 ) {
             this.retrieve += c;
             this.module.setProgress(retrieve);
-            HandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
+            FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
         }
 
         return result;
@@ -526,13 +526,13 @@ public class ConnectorDB extends ConnectorBase {
                 retrieve += c;
                 c = 0;
                 this.module.setProgress(retrieve);
-                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
         }
         if ( c > 0 ) {
             retrieve += c;
             this.module.setProgress(retrieve);
-            HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+            FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
         }
 
         return result;
@@ -575,7 +575,7 @@ public class ConnectorDB extends ConnectorBase {
             if (rs.next()) {
                 int count = rs.getInt("COUNT");
                 this.module.setProgress(count);
-                HandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
+                FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
         } catch (Exception e) {
             e.printStackTrace();

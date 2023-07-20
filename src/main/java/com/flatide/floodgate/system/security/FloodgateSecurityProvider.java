@@ -24,7 +24,7 @@
 
 package com.flatide.floodgate.system.security;
 
-public interface SecurityProvider {
+public interface FloodgateSecurityProvider {
     public String encrypt(String msg) throws Exception;
     public String decrypt(String msg) throws Exception;
 }

@@ -29,8 +29,8 @@ import com.flatide.floodgate.FloodgateConstants;
 import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
 import com.flatide.floodgate.agent.flow.stream.carrier.Carrier;
-import com.flatide.floodgate.agent.handler.HandlerManager;
-import com.flatide.floodgate.agent.handler.HandlerManager.Step;
+import com.flatide.floodgate.agent.handler.FloodgateFloodgateHandlerManager;
+import com.flatide.floodgate.agent.handler.FloodgateFloodgateHandlerManager.Step;
 import com.flatide.floodgate.agent.meta.*;
 
 import java.io.File;
@@ -99,7 +99,7 @@ public class ChannelAgent {
         }
         Map apiInfo = (Map) apiMeta.get("DATA");
 
-        HandlerManager.shared().handle(Step.CHANNEL_IN, context, null);
+        FloodgateFloodgateHandlerManager.shared().handle(Step.CHANNEL_IN, context, null);
 
         /*
             "TARGET": {
@@ -211,7 +211,7 @@ public class ChannelAgent {
         addContext(CONTEXT_KEY.LATEST_RESULT, success ? "success" : "fail");
         addContext(CONTEXT_KEY.LATEST_MSG, logString);
 
-        HandlerManager.shared().handle(Step.CHANNEL_OUT, context, null);
+        FloodgateFloodgateHandlerManager.shared().handle(Step.CHANNEL_OUT, context, null);
 
         Map<String, Object> response = new HashMap<>();
         response.put("result", result);
