@@ -31,8 +31,8 @@ import com.flatide.floodgate.agent.flow.Flow;
 import com.flatide.floodgate.agent.flow.FlowTag;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
 import com.flatide.floodgate.agent.flow.stream.carrier.Carrier;
-import com.flatide.floodgate.agent.handler.HandlerManager;
-import com.flatide.floodgate.agent.handler.HandlerManager.Step;
+import com.flatide.floodgate.agent.handler.FloodgateHandlerManager;
+import com.flatide.floodgate.agent.handler.FloodgateHandlerManager.Step;
 import com.flatide.floodgate.agent.meta.MetaManager;
 import com.flatide.floodgate.agent.spool.SpoolingManager;
 
@@ -93,7 +93,7 @@ public class ChannelJob implements Callable<Map> {
             }
 
             String flowId = flow.getFlowId();
-            HandlerManager.shared().handle(Step.FLOW_IN, context, flow);
+            FloodgateHandlerManager.shared().handle(Step.FLOW_IN, context, flow);
 
             Object spooling = flowInfo.get(FlowTag.SPOOLING.name());
             if( spooling != null && (boolean) spooling) {
@@ -150,7 +150,7 @@ public class ChannelJob implements Callable<Map> {
         flow.setResult((String) log.get("RESULT"));
         flow.setMsg((String) log.get("MSG"));
 
-        HandlerManager.shared().handle(Step.FLOW_OUT, context, flow);
+        FloodgateHandlerManager.shared().handle(Step.FLOW_OUT, context, flow);
 
         return result;
     }

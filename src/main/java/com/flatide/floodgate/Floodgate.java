@@ -45,6 +45,6 @@ public class Floodgate {
         MetaManager.shared().load((String) ConfigurationManager.shared().get(FloodgateConstants.META_SOURCE_TABLE_FOR_TEMPLATE));
 
         FileLogHandler fileHandler = new FileLogHandler();
-        FloodgateHandlerManager.shared().addHandler("Default File Log Handler", fileHandler);
+        FloodgateHandlerManager.shared().addHandler("Floodgate File Log Handler", fileHandler);
    }
 }

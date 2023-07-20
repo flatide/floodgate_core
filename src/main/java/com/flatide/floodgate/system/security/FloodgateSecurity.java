@@ -38,7 +38,7 @@ public class FloodgateSecurity {
         private static final FloodgateSecurity instance = new FloodgateSecurity();
     }
 
-    public void setFloodgateSecurityProvider(FloodgateSecurityProvider provider) {
+    public void setSecurityProvider(FloodgateSecurityProvider provider) {
         this.provider = provider;
     }
 
