@@ -45,7 +45,7 @@ public class ConnectorFactory {
 
         switch( method ) {
             case "JDBC":
-                String dbType = (String) info.get(ConnectorTag.JDBCTag.DBTYPE.name());
+                String dbType = (String) info.get(ConnectorTag.DBTYPE.name());
                 loadDriver(dbType);
                 con = new ConnectorDB();
                 break;

@@ -38,6 +38,7 @@ import com.flatide.floodgate.agent.flow.module.ModuleContext.MODULE_CONTEXT;
 import com.flatide.floodgate.agent.flow.rule.FunctionProcessor;
 import com.flatide.floodgate.system.FlowEnv;
 import com.flatide.floodgate.system.security.FloodgateSecurity;
+import com.flatide.floodgate.system.utils.DBUtils;
 import com.flatide.floodgate.system.utils.PropertyMap;
 
 //import com.zaxxer.hikari.HikariConfig;
@@ -63,6 +64,8 @@ public class ConnectorDB extends ConnectorBase {
     ModuleContext moduleContext = null;
 
     Module module = null;
+
+    Map connectInfo = null;
 
     private Connection connection = null;
     private Integer fetchSize = 0;
@@ -149,7 +152,7 @@ public class ConnectorDB extends ConnectorBase {
 
         this.module = module;
 
-        Map connectInfo = (Map) module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
+        connectInfo = (Map) module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
         String url = PropertyMap.getString(connectInfo, ConnectorTag.URL);
         String user = PropertyMap.getString(connectInfo, ConnectorTag.USER);
         String password = PropertyMap.getString(connectInfo, ConnectorTag.PASSWORD);
@@ -428,19 +431,20 @@ public class ConnectorDB extends ConnectorBase {
             }
 
             c++;
-            if (c >= limit) {
-                this.retrieve += c;
-                c = 0;
-                break;
-            }
+            this.updateCount++;
             if (this.updateCount >= this.sizeForUpdateHandler) {
                 this.updateCount = 0;
                 this.module.setProgress(retrieve);
                 FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
                 break;
             }
+            if (c >= limit) {
+                this.retrieve += c;
+                c = 0;
+                break;
+            }
         }
-        if ( c > 0 ) {
+        if (buffer.isEmpty()) {
             this.retrieve += c;
             this.module.setProgress(retrieve);
             FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);

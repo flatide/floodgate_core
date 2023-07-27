@@ -55,6 +55,10 @@ public class ChannelAgent {
         this.context.add(key, value);
     }
 
+    public void addContext(String key, Object value) {
+        this.context.add(key, value);
+    }
+
     public Object getContext(CONTEXT_KEY key) {
         return this.context.get(key);
     }

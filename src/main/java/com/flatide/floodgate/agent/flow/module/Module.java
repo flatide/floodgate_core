@@ -195,7 +195,7 @@ public class Module {
 
                         String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                         MappingRule rule = flowContext.getRules().get(ruleName);
-                        String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
+                        String dbType = (String) connInfo.get(ConnectorTag.DBTYPE.toString());
                         rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
 
                         String query = documentTemplate.makeHeader(this.context, rule, temp);
@@ -241,7 +241,7 @@ public class Module {
                         String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                         MappingRule rule = flowContext.getRules().get(ruleName);
 
-                        String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
+                        String dbType = (String) connInfo.get(ConnectorTag.DBTYPE.toString());
                         rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
 
                         connector.beforeCreate(rule);
@@ -337,7 +337,7 @@ public class Module {
                     String ruleName = (String) this.sequences.get(FlowTag.RULE.name());
                     MappingRule rule = flowContext.getRules().get(ruleName);
 
-                    String dbType = (String) connInfo.get(ConnectorTag.JDBCTag.DBTYPE.toString());
+                    String dbType = (String) connInfo.get(ConnectorTag.DBTYPE.toString());
                     rule.setFunctionProcessor(connector.getFunctionProcessor(dbType));
 
                     Payload payload = null;

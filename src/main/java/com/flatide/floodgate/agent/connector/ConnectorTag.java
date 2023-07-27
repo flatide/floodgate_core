@@ -28,9 +28,7 @@ public enum ConnectorTag {
     CONNECTOR,
     PASSWORD,
     URL,
-    USER;
+    USER,
 
-    public enum JDBCTag {
-        DBTYPE
-    }
+    DBTYPE,
 }
