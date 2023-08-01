@@ -86,6 +86,8 @@ public class ConnectorDB extends ConnectorBase {
 
     private int updateCount = 0;
 
+    private int errorPosition = -1;
+
     private long cur;
 
     private static class DBFunctionProcessorMySql implements FunctionProcessor {
@@ -249,6 +251,9 @@ public class ConnectorDB extends ConnectorBase {
                 FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, channelContext, this.module);
             }
         } catch (Exception e) {
+            errorPosition = ps.getUpdateCount();
+            errorPosition += this.sent;
+
             e.printStackTrace();
             throw e;
         }
@@ -432,11 +437,10 @@ public class ConnectorDB extends ConnectorBase {
 
             c++;
             this.updateCount++;
-            if (this.updateCount >= this.sizeForUpdateHandler) {
+            if (this.updateCount > this.sizeForUpdateHandler) {
                 this.updateCount = 0;
                 this.module.setProgress(retrieve);
                 FloodgateHandlerManager.shared().handle(Step.MODULE_PROGRESS, this.channelContext, this.module);
-                break;
             }
             if (c >= limit) {
                 this.retrieve += c;
@@ -665,5 +669,10 @@ public class ConnectorDB extends ConnectorBase {
     @Override
     public int getSent() {
         return sent;
+    }
+
+    @Override
+    public int getErrorPosition() {
+        return errorPosition;
     }
 }

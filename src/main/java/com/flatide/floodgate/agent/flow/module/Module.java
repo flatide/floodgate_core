@@ -304,8 +304,14 @@ public class Module {
             }
         } catch (Exception e) {
             connector.rollback();
+            int errorPos = connector.getErrorPosition();
             setResult("fail");
-            setMsg(e.getMessage());
+
+            String errMsg = e.getMessage();
+            if (errorPos >= 0) {
+                errMsg = "#" + (errorPos + 1) + " : " + errMsg;
+            }
+            setMsg(errMsg);
             e.printStackTrace();
             throw e;
         }

@@ -49,6 +49,7 @@ public class ConnectorFile extends ConnectorBase {
     private BufferedOutputStream outputStream;
 
     private int sent = 0;
+    private int errorPosition = -1;
 
     private static class FileFunctionProcessor implements FunctionProcessor {
         public Object process(MappingRuleItem item) {
@@ -184,5 +185,10 @@ public class ConnectorFile extends ConnectorBase {
     @Override
     public int getSent() {
         return sent;
+    }
+
+    @Override
+    public int getErrorPosition() {
+        return errorPosition;
     }
 }

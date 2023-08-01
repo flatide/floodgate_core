@@ -115,7 +115,7 @@ public class DBUtils {
         String query = "SELECT " + columns + " FROM " + table;
 
         switch (dbType.trim().toUpperCase()) {
-            case "ORCLE":
+            case "ORACLE":
             query = query + " WHERE ROWNUM <= " + String.valueOf(limit);
             break;
             case "TIBERO":

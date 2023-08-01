@@ -63,4 +63,5 @@ public interface Connector {
     void close() throws Exception;
 
     int getSent();
+    int getErrorPosition();
 }
