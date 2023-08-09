@@ -46,7 +46,7 @@ public class FlowMockup extends Flow {
     }
 
     public FGInputStream process() throws Exception {
-        String entry = this.context.getString("CONTEXT.REQUEST_PARAMS.entry");
+        String entry = this.context.getString("CHANNEL_CONTEXT.REQUEST_PARAMS.entry");
         if (entry == null || entry.isEmpty()) {
             entry = this.context.getEntry();
         }
