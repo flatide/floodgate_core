@@ -24,6 +24,8 @@
 
 package com.flatide.floodgate;
 
+import com.flatide.floodgate.agent.connector.function.DefaultEmbedFunction;
+import com.flatide.floodgate.agent.connector.function.FloodgateFunctionManager;
 import com.flatide.floodgate.agent.handler.FileLogHandler;
 import com.flatide.floodgate.agent.handler.FloodgateHandlerManager;
 import com.flatide.floodgate.agent.logging.LoggingManager;
@@ -46,5 +48,8 @@ public class Floodgate {
 
         FileLogHandler fileHandler = new FileLogHandler();
         FloodgateHandlerManager.shared().addHandler("Floodgate File Log Handler", fileHandler);
+
+        DefaultEmbedFunction function = new DefaultEmbedFunction();
+        FloodgateFunctionManager.shared().setFunction(function);
    }
 }
