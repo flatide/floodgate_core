@@ -41,6 +41,7 @@ import com.flatide.floodgate.agent.connector.ConnectorFactory;
 import com.flatide.floodgate.agent.flow.stream.FGInputStream;
 import com.flatide.floodgate.agent.flow.stream.FGSharableInputStream;
 import com.flatide.floodgate.agent.flow.stream.Payload;
+import com.flatide.floodgate.agent.flow.stream.carrier.Carrier;
 import com.flatide.floodgate.agent.flow.stream.carrier.container.JSONContainer;
 import com.flatide.floodgate.agent.handler.FloodgateHandlerManager;
 import com.flatide.floodgate.agent.handler.FloodgateHandlerManager.Step;
@@ -283,6 +284,12 @@ public class Module {
                         buffer = null;
                         return null;
                     }
+
+                    Boolean debug = (Boolean) this.sequences.get(FlowTag.DEBUG.name());
+                    if (debug != null && debug ) {
+                        logger.info(buffer);
+                    }
+
                     return buffer;
                 }
                 case CREATE:
@@ -334,6 +341,16 @@ public class Module {
                         data.put("ITEMS", resultList);
                         FGInputStream stream = new FGSharableInputStream(new JSONContainer(data, "HEADER", "ITEMS"));
                         flowContext.setCurrent(stream);
+
+                        Boolean debug = (Boolean) this.sequences.get(FlowTag.DEBUG.name());
+                        if (debug != null && debug) {
+                            if (stream != null) {
+                                Carrier carrier = stream.getCarrier();
+
+                                Map temp = (Map) carrier.getSnapshot();
+                                logger.info(temp);
+                            }
+                        }
                     } else {
                         flowContext.setCurrent(null);
                     }
@@ -414,7 +431,7 @@ public class Module {
                 {
                     connector.afterRead();
 
-                    flowContext.setCurrent(null);
+                    //flowContext.setCurrent(null);
                     break;
                 }
                 case CREATE:

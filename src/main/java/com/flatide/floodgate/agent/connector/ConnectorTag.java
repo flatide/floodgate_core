@@ -29,6 +29,11 @@ public enum ConnectorTag {
     PASSWORD,
     URL,
     USER,
+    TIMEOUT,
 
     DBTYPE,
+
+    // for ftp
+    PASSIVE,
+    CODE,
 }
