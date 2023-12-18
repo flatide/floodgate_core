@@ -25,40 +25,10 @@
 package com.flatide.floodgate.agent;
 
 public enum ApiTag {
-    ENTRY,
-    DEBUG,
-    SPOOLING,
-    MODULE,
-    RULE,
-    FILTER,
-
-    // For Module
-    BEFORE,
-    AFTER,
-    RESULT,
-    CALL,
-    PIPE,
-    BUFFERSIZE,
-
-    CONNECT,
-    TEMPLATE,
-    //OUTPUT,
-    TARGET,
-    BATCHSIZE,
-    FETCHSIZE,
-    ACTION,
-    TIMEOUT,
-    SQL,
-    CONDITION,
-    LIMIT,
-
-    // For Action
-
-    FLUSH,
-    CHECK,
-    COUNT,
-    CREATE,
-    READ,
-    UPDATE,
-    DELETE
+	TARGET,
+	BACKUP_PAYLOAD,
+	CONCURRENCY,
+	ENABLE,
+	THREAD_MAX,
+	
 }

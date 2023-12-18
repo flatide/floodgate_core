@@ -144,7 +144,7 @@ public class ChannelAgent {
 
         // 페이로드 저장 true인 경우
         // 페이로드 저장은 호출시의 데이타에 한정한다
-        if( (boolean) apiInfo.get("BACKUP_PAYLOAD") == true) {
+        if( (boolean) apiInfo.get(ApiTag.BACKUP_PAYLOAD.name()) == true) {
             Carrier carrier = current.getCarrier();
             try {
                 String path = ConfigurationManager.shared().getString(FloodgateConstants.CHANNEL_PAYLOAD_FOLDER);
@@ -160,11 +160,11 @@ public class ChannelAgent {
 
         String logString = "";
         try {
-            Map<String, Object> concurrencyInfo = (Map<String, Object>) apiInfo.get("CONCURRENCY");
+            Map<String, Object> concurrencyInfo = (Map<String, Object>) apiInfo.get(ApiTag.CONCURRENCY.name());
 
             // 병렬실행인 경우
-            if( concurrencyInfo != null && (boolean) concurrencyInfo.get("ENABLE") == true) {
-                System.out.println("Thread Max: " + concurrencyInfo.get("THREAD_MAX"));
+            if( concurrencyInfo != null && (boolean) concurrencyInfo.get(ApiTag.ENABLE.name()) == true) {
+                System.out.println("Thread Max: " + concurrencyInfo.get(ApiTag.THREAD_MAX.name()));
 
                 ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newCachedThreadPool();
 
