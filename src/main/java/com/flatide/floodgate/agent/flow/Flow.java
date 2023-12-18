@@ -107,7 +107,6 @@ public class Flow {
 
         this.context.setDebug((Boolean) flowInfo.get(FlowTag.DEBUG.name()));
         this.context.add(CONTEXT_KEY.CHANNEL_CONTEXT, channelContext);
-        channelContext.add(CONTEXT_KEY.FLOW_CONTEXT, this.context);
 
         // Module
         @SuppressWarnings("unchecked")
@@ -141,7 +140,7 @@ public class Flow {
     }
 
     public FGInputStream process() throws Exception {
-        String entry = context.getString("CONTEXT.REQUEST_PARAMS.entry");
+        String entry = context.getString("CHANNEL_CONTEXT.REQUEST_PARAMS.entry");
         if( entry == null || entry.isEmpty() ) {
             entry = context.getEntry();
         }

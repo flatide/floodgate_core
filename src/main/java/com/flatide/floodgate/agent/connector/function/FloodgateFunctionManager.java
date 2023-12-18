@@ -22,47 +22,30 @@
  * SOFTWARE.
  */
 
-package com.flatide.floodgate.agent.flow;
+package com.flatide.floodgate.agent.connector.function;
 
 import com.flatide.floodgate.agent.Context;
-import com.flatide.floodgate.agent.flow.stream.FGInputStream;
-import com.flatide.floodgate.system.utils.PropertyMap;
-import com.flatide.floodgate.agent.flow.module.Module;
-import com.flatide.floodgate.agent.flow.rule.MappingRule;
 
-import java.util.Map;
+public final class FloodgateFunctionManager {
+    private static final FloodgateFunctionManager instance = new FloodgateFunctionManager();
 
-/*
-    Mockup for query generation
-*/
+    private FloodgateAbstractFunction function = null;
 
-public class FlowMockup extends Flow {
-    public FlowMockup(String targetId, Context context) {
-        super(targetId, context);
+    private FloodgateFunctionManager() {
     }
 
-    public FlowMockup(String flowId, String targetId, Context context) {
-        super(flowId, targetId, context);
+    public static FloodgateFunctionManager shared() {
+        return instance;
     }
 
-    public FGInputStream process() throws Exception {
-        String entry = this.context.getString("CHANNEL_CONTEXT.REQUEST_PARAMS.entry");
-        if (entry == null || entry.isEmpty()) {
-            entry = this.context.getEntry();
+    public void setFunction(FloodgateAbstractFunction function) {
+        this.function = function;
+    }
+
+    public Object processFunction(Context context, String function) {
+        if (this.function != null) {
+            return this.function.process(context, function);
         }
-
-        this.context.setNext(entry);
-        while (this.context.hasNext()) {
-            Module module = this.context.next();
-
-            try {
-                module.processBefore(this, this.context);
-            } catch (Exception e) {
-                e.printStackTrace();
-                throw e;
-            }
-        }
-
-        return this.context.getCurrent();
+        return null;
     }
 }

@@ -26,6 +26,7 @@ package com.flatide.floodgate.agent.connector;
 
 import com.flatide.floodgate.agent.Context;
 import com.flatide.floodgate.agent.Context.CONTEXT_KEY;
+import com.flatide.floodgate.agent.connector.function.FloodgateFunctionManager;
 import com.flatide.floodgate.agent.flow.rule.MappingRuleItem;
 import com.flatide.floodgate.agent.handler.FloodgateHandlerManager;
 import com.flatide.floodgate.agent.handler.FloodgateHandlerManager.Step;
@@ -90,28 +91,13 @@ public class ConnectorDB extends ConnectorBase {
 
     private long cur;
 
-    private static class DBFunctionProcessorMySql implements FunctionProcessor {
-        public Object process(MappingRuleItem item) {
-            String func = item.getSourceName();
-            MappingRule.Function function = MappingRule.Function.valueOf(func);
-
-            switch (function) {
-                case TARGET_DATE:
-                    //item.setAction(MappingRuleItem.RuleAction.literal);
-                    return "now()";
-                default:
-                    return "?";
-            }
-        }
-    }
-
     private static class DBFunctionProcessorOracle implements FunctionProcessor {
         public Object process(MappingRuleItem item) {
             String func = item.getSourceName();
-            MappingRule.Function function = MappingRule.Function.valueOf(func);
+            //MappingRule.Function function = MappingRule.Function.valueOf(func);
 
-            switch (function) {
-                case TARGET_DATE:
+            switch (func) {
+                case "TARGET_DATE":
                     //item.setAction(MappingRuleItem.RuleAction.literal);
                     return "sysdate";
                 default:
@@ -120,31 +106,137 @@ public class ConnectorDB extends ConnectorBase {
         }
     }
 
-    static FunctionProcessor PRE_PROCESSOR_ORACLE = new DBFunctionProcessorOracle();
-    static FunctionProcessor PRE_PROCESSOR_MYSQL = new DBFunctionProcessorMySql();
+    private static class DBFunctionProcessorTibero implements FunctionProcessor {
+        public Object process(MappingRuleItem item) {
+            String func = item.getSourceName();
 
-    Object processEmbedFunction(String function) {
-        switch( function ) {
-            case "DATE":
-                long current = System.currentTimeMillis();
-                return new Date(current);
-            case "SEQ":
-                return FlowEnv.shared().getSequence();
-            default:
-                return null;
+            switch (func) {
+                case "TARGET_DATE":
+                    //item.setAction(MappingRuleItem.RuleAction.literal);
+                    return "sysdate";
+                default:
+                    return "?";
+            }
         }
     }
+
+    private static class DBFunctionProcessorMySql implements FunctionProcessor {
+        public Object process(MappingRuleItem item) {
+            String func = item.getSourceName();
+
+            switch (func) {
+                case "TARGET_DATE":
+                    //item.setAction(MappingRuleItem.RuleAction.literal);
+                    return "now()";
+                default:
+                    return "?";
+            }
+        }
+    }
+
+    private static class DBFunctionProcessorMariaDB implements FunctionProcessor {
+        public Object process(MappingRuleItem item) {
+            String func = item.getSourceName();
+
+            switch (func) {
+                case "TARGET_DATE":
+                    //item.setAction(MappingRuleItem.RuleAction.literal);
+                    return "now()";
+                default:
+                    return "?";
+            }
+        }
+    }
+
+    private static class DBFunctionProcessorPostgreSQL implements FunctionProcessor {
+        public Object process(MappingRuleItem item) {
+            String func = item.getSourceName();
+
+            switch (func) {
+                case "TARGET_DATE":
+                    //item.setAction(MappingRuleItem.RuleAction.literal);
+                    return "now()";
+                default:
+                    return "?";
+            }
+        }
+    }
+
+    private static class DBFunctionProcessorGreenplum implements FunctionProcessor {
+        public Object process(MappingRuleItem item) {
+            String func = item.getSourceName();
+
+            switch (func) {
+                case "TARGET_DATE":
+                    //item.setAction(MappingRuleItem.RuleAction.literal);
+                    return "now()";
+                default:
+                    return "?";
+            }
+        }
+    }
+
+    private static class DBFunctionProcessorMSSQL implements FunctionProcessor {
+        public Object process(MappingRuleItem item) {
+            String func = item.getSourceName();
+
+            switch (func) {
+                case "TARGET_DATE":
+                    //item.setAction(MappingRuleItem.RuleAction.literal);
+                    return "getDate()";
+                default:
+                    return "?";
+            }
+        }
+    }
+
+    private static class DBFunctionProcessorDB2 implements FunctionProcessor {
+        public Object process(MappingRuleItem item) {
+            String func = item.getSourceName();
+
+            switch (func) {
+                case "TARGET_DATE":
+                    //item.setAction(MappingRuleItem.RuleAction.literal);
+                    return "CURRENT TIMESTAMP";
+                default:
+                    return "?";
+            }
+        }
+    }
+
+    static FunctionProcessor PRE_PROCESSOR_ORACLE = new DBFunctionProcessorOracle();
+    static FunctionProcessor PRE_PROCESSOR_TIBERO = new DBFunctionProcessorTibero();
+    static FunctionProcessor PRE_PROCESSOR_MYSQL = new DBFunctionProcessorMySql();
+    static FunctionProcessor PRE_PROCESSOR_MARIADB = new DBFunctionProcessorMariaDB();
+    static FunctionProcessor PRE_PROCESSOR_POSTGRESQL = new DBFunctionProcessorPostgreSQL();
+    static FunctionProcessor PRE_PROCESSOR_GREENPLUM = new DBFunctionProcessorGreenplum();
+    static FunctionProcessor PRE_PROCESSOR_MSSQL = new DBFunctionProcessorMSSQL();
+    static FunctionProcessor PRE_PROCESSOR_DB2 = new DBFunctionProcessorDB2();
 
     @Override
     public FunctionProcessor getFunctionProcessor(String type) {
         if( type == null ) {
-            return PRE_PROCESSOR_MYSQL;
+            return PRE_PROCESSOR_ORACLE;
         }
         switch(type.toUpperCase()) {
             case "ORACLE":
                 return PRE_PROCESSOR_ORACLE;
-            default:
+            case "TIBERO":
+                return PRE_PROCESSOR_TIBERO;
+            case "MYSQL":
                 return PRE_PROCESSOR_MYSQL;
+            case "MARIADB":
+                return PRE_PROCESSOR_MARIADB;
+            case "POSTGRESQL":
+                return PRE_PROCESSOR_POSTGRESQL;
+            case "GREENPLUM":
+                return PRE_PROCESSOR_GREENPLUM;
+            case "MSSQL":
+                return PRE_PROCESSOR_MSSQL;
+            case "DB2":
+                return PRE_PROCESSOR_DB2;
+            default:
+                return PRE_PROCESSOR_ORACLE;
         }
     }
 
@@ -218,7 +310,7 @@ public class ConnectorDB extends ConnectorBase {
                     int i = 1;
                     for (String key : this.param) {
                         if (key.startsWith(">")) {
-                            Object value = processEmbedFunction(key.substring(1));
+                            Object value = FloodgateFunctionManager.shared().processFunction(moduleContext, key.substring(1)); 
                             ps.setObject(i++, value);
                         } else if (key.startsWith("{")) {
                             Object value = moduleContext.get(key.substring(1, key.length() - 1));
@@ -287,7 +379,7 @@ public class ConnectorDB extends ConnectorBase {
                 int i = 1;
                 for (String key : this.param) {
                     if (key.startsWith(">")) {
-                        Object value = processEmbedFunction(key.substring(1));
+                        Object value = FloodgateFunctionManager.shared().processFunction(moduleContext, key.substring(1));
                         ps.setObject(i++, value);
                     } else if (key.startsWith("{")) {
                         Object value = moduleContext.get(key.substring(1, key.length() - 1));
@@ -385,12 +477,17 @@ public class ConnectorDB extends ConnectorBase {
             }
 
             int i = 0;
-            for (String source : sourceSet) {
-                if (i > 0) {
-                    query += ", ";
+            if (sourceSet.isEmpty()) {
+                // when column for selection is not exist
+                query += " * ";
+            } else {
+                for (String source : sourceSet) {
+                    if (i > 0) {
+                        query += ", ";
+                    }
+                    query += source;
+                    i++;
                 }
-                query += source;
-                i++;
             }
 
             query += " FROM " + table;
