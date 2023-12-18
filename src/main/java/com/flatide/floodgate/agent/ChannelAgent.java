@@ -112,7 +112,7 @@ public class ChannelAgent {
          */
         List<String> targetList = new ArrayList<>();
 
-        Map<String, List<String>> targetMap = (Map) apiInfo.get("TARGET");
+        Map<String, List<String>> targetMap = (Map) apiInfo.get(ApiTag.TARGET.name());
         if( targetMap != null && !targetMap.isEmpty()) {
             Map params = (Map) getContext(CONTEXT_KEY.REQUEST_PARAMS);
             String targets = (String) params.get("targets");
