@@ -305,9 +305,9 @@ public class DocumentTemplate {
 
                         if( source == null ) {
                             //logger.info(item.getSourceName() + " is not exist.");
-                            //result = "";
                             //TODO Source가 없을 경우 empty로 계속 진행할 것인지 Exception을 발생시키고 중단할 것인지 결정할 것. 2021.03.15
-                            throw new Exception(item.getSourceName() + " is not exist.");
+                            result = "";
+                            //throw new Exception(item.getSourceName() + " is not exist.");
                         }
                     }
 

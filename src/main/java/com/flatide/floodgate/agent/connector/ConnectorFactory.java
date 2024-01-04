@@ -52,6 +52,12 @@ public class ConnectorFactory {
             case "FILE":
                 con = new ConnectorFile();
                 break;
+            case "FTP":
+                con = new ConnectorFTP();
+                break;
+            case "SFTP":
+                con = new ConnectorSFTP();
+                break;
             default:
                 return null;
         }

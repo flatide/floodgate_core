@@ -86,7 +86,7 @@ public class ConnectorFile extends ConnectorBase {
         Map connectInfo = (Map) module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
         String url = PropertyMap.getString(connectInfo, ConnectorTag.URL);
 
-        String target = (String) module.getSequences().get(FlowTag.TARGET);
+        String target = PropertyMap.getString(this.module.getSequences(), FlowTag.TARGET);
         String filename = context.evaluate(target);
         this.outputStream = new BufferedOutputStream(new FileOutputStream(new File(url + "/" + filename)));
     }
