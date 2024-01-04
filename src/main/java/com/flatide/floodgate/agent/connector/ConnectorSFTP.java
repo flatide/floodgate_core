@@ -36,6 +36,10 @@ import com.flatide.floodgate.agent.flow.module.ModuleContext.MODULE_CONTEXT;
 import com.flatide.floodgate.system.FlowEnv;
 import com.flatide.floodgate.system.security.FloodgateSecurity;
 import com.flatide.floodgate.system.utils.PropertyMap;
+import com.jcraft.jsch.Channel;
+import com.jcraft.jsch.ChannelSftp;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
 
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
@@ -43,14 +47,11 @@ import java.io.InputStream;
 import java.sql.Date;
 import java.util.*;
 
-import org.apache.commons.net.ftp.FTP;
-import org.apache.commons.net.ftp.FTPClient;
-import org.apache.commons.net.ftp.FTPReply;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class ConnectorFTP extends ConnectorBase {
-    Logger logger = LogManager.getLogger(ConnectorFTP.class);
+public class ConnectorSFTP extends ConnectorBase {
+    Logger logger = LogManager.getLogger(ConnectorSFTP.class);
     Module module = null;
 
     Context channelContext = null;
@@ -58,7 +59,10 @@ public class ConnectorFTP extends ConnectorBase {
 
     private BufferedOutputStream outputStream;
 
-    private FTPClient ftp = null;
+    private Session session = null;
+    private Channel channel = null;
+    private ChannelSftp sftp = null;
+
     private boolean isLogin = false;
 
     private int sent = 0;
@@ -109,53 +113,32 @@ public class ConnectorFTP extends ConnectorBase {
 
         String target = PropertyMap.getString(this.module.getSequences(), FlowTag.TARGET);
         remoteFile = context.evaluate(target);
+        String baseDir = remoteFile.substring(0, remoteFile.lastIndexOf("/"));
+        remoteFile = remoteFile.substring(remoteFile.lastIndexOf("/") + 1);
 
-        this.ftp = new FTPClient();
-
-        int reply;
-        String[] connect = url.split(":");
-
-        int timeout = PropertyMap.getIntegerDefault(connectInfo, ConnectorTag.TIMEOUT, 0);
-
-        this.ftp.setConnectTimeout(timeout);
+        JSch jsch = new JSch();
 
         try {
-            if (connect.length > 1) {
-                this.ftp.connect(connect[0], Integer.parseInt(connect[1]));
-            } else {
-                this.ftp.connect(connect[0]);
-            }
-        } catch (Exception e) {
+            String[] connect = url.split(":");
+            session = jsch.getSession(user, connect[0], Integer.parseInt(connect[1]));
+            session.setPassword(password);
+
+            java.util.Properties config = new java.util.Properties();
+            config.put("StrictHostKeyChecking", "no");
+            session.setConfig(config);
+
+            session.connect();
+
+            channel = session.openChannel("sftp");
+            channel.connect();
+
+            sftp = (ChannelSftp)channel;
+            //System.out.println("=> Connected to " + host);
+            sftp.cd(baseDir);
+        } catch(Exception e) {
             e.printStackTrace();
             throw e;
         }
-
-        reply = this.ftp.getReplyCode();
-        if (!FTPReply.isPositiveCompletion(reply)) {
-            this.ftp.disconnect();
-            throw new Exception("Error while connecting FTP server" + reply);
-        }
-
-        boolean rt = true;
-        rt = this.ftp.login(user, password);
-        if (rt == false) {
-            throw new Exception("Error while login FTP server");
-        }
-        this.isLogin = true;
-        rt = this.ftp.setFileType(FTP.BINARY_FILE_TYPE);
-        if (rt == false) {
-            throw new Exception("Error while setting File Type on FTP server");
-        }
-        rt = this.ftp.changeWorkingDirectory(target);
-        if ( rt==false) {
-            throw new Exception("Error while changing working Directory on FTP server");
-        }
-
-        if (PropertyMap.getStringDefault(connectInfo, ConnectorTag.PASSIVE, "FALSE").equals("TRUE")) {
-            this.ftp.enterLocalPassiveMode();
-        }
-
-        this.ftp.setRemoteVerificationEnabled(false);
     }
 
     @Override
@@ -163,9 +146,7 @@ public class ConnectorFTP extends ConnectorBase {
         ModuleContext context = this.module.getContext();
         String header = getDocumentTemplate().makeHeader(context, mappingRule, null);
 
-        if (!header.isEmpty()) {
-            appendFile(header);
-        }
+        writeFile(header, ChannelSftp.OVERWRITE);
     }
 
     @Override
@@ -173,7 +154,7 @@ public class ConnectorFTP extends ConnectorBase {
         ModuleContext context = this.module.getContext();
         String body = getDocumentTemplate().makeBody(context, mappingRule, itemList, sent);
 
-        appendFile(body);
+        writeFile(body, ChannelSftp.APPEND);
 
         this.sent += itemList.size();
         return itemList.size();
@@ -184,7 +165,7 @@ public class ConnectorFTP extends ConnectorBase {
         ModuleContext context = this.module.getContext();
         String body = getDocumentTemplate().makeBody(context, mappingRule, items, sent);
 
-        appendFile(body);
+        writeFile(body, ChannelSftp.APPEND);
 
         this.sent += items.size();
         return items.size();
@@ -201,21 +182,18 @@ public class ConnectorFTP extends ConnectorBase {
         ModuleContext context = this.module.getContext();
         String footer = getDocumentTemplate().makeFooter(context, mappingRule, null);
         if (!footer.isEmpty()) {
-            appendFile(footer);
+            writeFile(footer, ChannelSftp.APPEND);
         }
     }
 
-    public int appendFile(String buffer) throws Exception {
+    public int writeFile(String buffer, int mode) throws Exception {
         Map connectInfo = (Map) this.module.getContext().get(MODULE_CONTEXT.CONNECT_INFO);
         String code = PropertyMap.getStringDefault(connectInfo, ConnectorTag.CODE, "UTF-8");
 
         InputStream input = new ByteArrayInputStream(buffer.getBytes(code));
 
         try {
-            boolean success = this.ftp.appendFile(remoteFile, input);
-            if (!success) {
-                logger.info("Append to the " + remoteFile + " is failed.");
-            }
+            this.sftp.put(input, remoteFile, mode);
         } catch (Exception e) {
             e.printStackTrace();
             throw e;
