@@ -76,6 +76,24 @@ public class ConnectorFactory {
             case "mysql_old":
                 Class.forName("com.mysql.jdbc.Driver");
                 break;
+            case "mariadb":
+                Class.forName("com.mysql.jdbc.Driver");
+                break;
+            case "postgresql":
+                Class.forName("org.postgresql.Driver");
+                break;
+            case "greenplum":
+                Class.forName("org.postgresql.Driver");
+                break;
+            case "mssql":
+                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+                break;
+            case "db2":
+                Class.forName("com.ibm.db2.jcc.DB2Driver");
+                break;
+            case "tibero":
+                Class.forName("com.tmax.tibero.jdbc.TbDriver");
+                break;
             default:
                 break;
         }
